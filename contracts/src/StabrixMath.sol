@@ -142,11 +142,13 @@ library StabrixMath {
         uint256[] memory v = virtualBalances(next, rates, p.floor);
         uint256 sumV;
         uint256 total;
+        uint256 heaviest;
         for (uint256 k; k < n; ++k) {
             sumV += v[k];
             total += v[k] - p.floor;
+            if (v[k] > heaviest) heaviest = v[k];
         }
-        if (sumV * WAD > p.sumCapRatio * rBefore) revert RangeEdge();
+        if (sumV * WAD > p.sumCapRatio * rBefore && v[i] == heaviest) revert RangeEdge();
         if (p.maxShareBps < BPS && (v[i] - p.floor) * BPS > uint256(p.maxShareBps) * total) revert ExposureCap();
 
         uint256 rAfter = radius(v);
