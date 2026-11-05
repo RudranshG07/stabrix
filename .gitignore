@@ -1,7 +1,7 @@
 node_modules/
 contracts/out/
 contracts/cache/
-contracts/broadcast/*/31337/
+contracts/broadcast/
 .env
 .env.*
 !.env.example
@@ -10,3 +10,6 @@ contracts/broadcast/*/31337/
 dist/
 coverage/
 *.log
+deployments/base-fork.json
+*.tsbuildinfo
+next-env.d.ts
