@@ -107,8 +107,7 @@ contract StabrixMathTest is Test {
         while (true) {
             try h.swapIn(4, 0, 2 * W) {
                 absorbed += 2;
-            }
-                catch {
+            } catch {
                 break;
             }
         }
@@ -185,8 +184,7 @@ contract StabrixMathTest is Test {
         uint256 out;
         try h.swapIn(i, j, amt) returns (uint256 o) {
             out = o;
-        }
-            catch {
+        } catch {
             return;
         }
         try h.swapIn(j, i, out) returns (uint256 back) {
@@ -206,22 +204,19 @@ contract StabrixMathTest is Test {
         uint256 w;
         try whole.swapIn(i, j, amt) returns (uint256 o) {
             w = o;
-        }
-            catch {
+        } catch {
             return;
         }
         uint256 s1;
         uint256 s2;
         try split.swapIn(i, j, cut) returns (uint256 o) {
             s1 = o;
-        }
-            catch {
+        } catch {
             return;
         }
         try split.swapIn(i, j, amt - cut) returns (uint256 o) {
             s2 = o;
-        }
-            catch {
+        } catch {
             return;
         }
         assertLe(s1 + s2, w + (fee > 0 ? 2 : 0));
@@ -238,22 +233,19 @@ contract StabrixMathTest is Test {
         uint256 w;
         try whole.swapIn(i, j, amt) returns (uint256 o) {
             w = o;
-        }
-            catch {
+        } catch {
             return;
         }
         uint256 s1;
         uint256 s2;
         try split.swapIn(i, j, cut) returns (uint256 o) {
             s1 = o;
-        }
-            catch {
+        } catch {
             return;
         }
         try split.swapIn(i, j, amt - cut) returns (uint256 o) {
             s2 = o;
-        }
-            catch {
+        } catch {
             return;
         }
         assertLe(s1 + s2, w);
@@ -267,22 +259,19 @@ contract StabrixMathTest is Test {
         uint256 w;
         try whole.swapIn(0, 2, amt) returns (uint256 o) {
             w = o;
-        }
-            catch {
+        } catch {
             return;
         }
         uint256 s1;
         uint256 s2;
         try split.swapIn(0, 2, cut) returns (uint256 o) {
             s1 = o;
-        }
-            catch {
+        } catch {
             return;
         }
         try split.swapIn(0, 2, amt - cut) returns (uint256 o) {
             s2 = o;
-        }
-            catch {
+        } catch {
             return;
         }
         assertLe(s1 + s2, w);
@@ -309,8 +298,7 @@ contract StabrixMathTest is Test {
         uint256 out;
         try h.quoteIn(i, j, amt) returns (uint256 o) {
             out = o;
-        }
-            catch {
+        } catch {
             return;
         }
         uint256 needed = h.quoteOut(i, j, out);
