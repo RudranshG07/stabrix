@@ -1,0 +1,16 @@
+{
+  "name": "@stabrix/contracts",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test"
+  },
+  "dependencies": {
+    "@1inch/swap-vm": "github:1inch/swap-vm#32c687c2b73101fc26549e48fa1ff8a4d73afbac",
+    "@1inch/aqua": "github:1inch/aqua#0.1.0",
+    "@1inch/solidity-utils": "6.9.7",
+    "@openzeppelin/contracts": "5.4.0",
+    "forge-std": "github:foundry-rs/forge-std#v1.11.0"
+  }
+}
