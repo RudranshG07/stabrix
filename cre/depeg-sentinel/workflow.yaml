@@ -1,0 +1,15 @@
+fork-settings:
+  user-workflow:
+    workflow-name: "stabrix-depeg-fork"
+  workflow-artifacts:
+    workflow-path: "."
+    config-path: "./config.fork.json"
+    secrets-path: ""
+
+production-settings:
+  user-workflow:
+    workflow-name: "stabrix-depeg"
+  workflow-artifacts:
+    workflow-path: "."
+    config-path: "./config.production.json"
+    secrets-path: ""
