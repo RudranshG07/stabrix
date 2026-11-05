@@ -1,0 +1,31 @@
+{
+  "name": "@stabrix/app",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.4",
+    "@types/katex": "^0.16.8",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.4",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@stabrix/sdk": "^0.1.0",
+    "@tanstack/react-query": "^5.106.1",
+    "katex": "^0.16.47",
+    "lucide-react": "^1.69.0",
+    "next": "^15.5.29",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "viem": "^2.57.16"
+  }
+}
