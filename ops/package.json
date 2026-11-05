@@ -1,0 +1,24 @@
+{
+  "name": "@stabrix/ops",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "seed": "tsx src/seed.ts",
+    "depeg": "tsx src/depeg.ts",
+    "price-api": "tsx src/price-api.ts",
+    "cre-config": "tsx src/cre-config.ts",
+    "typecheck": "tsc --noEmit",
+    "inspect": "tsx src/inspect.ts",
+    "seed:testnet": "tsx src/seed-testnet.ts"
+  },
+  "dependencies": {
+    "@stabrix/sdk": "0.1.0",
+    "viem": "^2.57.16"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}
