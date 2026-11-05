@@ -1,0 +1,14 @@
+{
+  "name": "stabrix",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "sdk",
+    "ops",
+    "app"
+  ],
+  "scripts": {
+    "test": "npm run test -w @stabrix/sdk && cd contracts && forge test",
+    "dev": "npm run dev -w @stabrix/app"
+  }
+}
