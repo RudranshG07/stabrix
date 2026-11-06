@@ -41,7 +41,7 @@ export function AccountMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex min-h-10 items-center gap-2 rounded-full bg-surface px-4 text-sm font-medium transition-colors hover:bg-surface-hover"
+        className="flex min-h-10 items-center gap-2 rounded-full border-2 border-surface-line bg-surface px-4 text-[12px] font-bold tracking-[0.06em] transition-colors hover:bg-surface-hover"
       >
         <Wallet className="size-4" aria-hidden />
         {signer ? (
@@ -56,11 +56,11 @@ export function AccountMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-surface-line bg-surface shadow-2xl shadow-black/50"
+          className="ink-card absolute right-0 mt-3 w-[min(19rem,calc(100vw-2rem))] overflow-hidden"
         >
           {DEV_ACCOUNTS && (
-            <div className="border-b border-surface-line p-2">
-              <p className="caption px-2 py-1.5">// FORK ACCOUNTS</p>
+            <div className="border-b-2 border-dashed border-line p-2">
+              <p className="px-2 py-1.5 text-[10px] font-bold tracking-[0.14em] text-muted uppercase">Fork accounts</p>
               {ANVIL_ACCOUNTS.map((a) => {
                 const address = privateKeyToAccount(a.key).address
                 const active = signer?.kind === 'dev' && signer.index === a.index
@@ -75,7 +75,7 @@ export function AccountMenu() {
                       setOpen(false)
                     }}
                     className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-left text-sm transition-colors hover:bg-surface-hover ${
-                      active ? 'text-accent-text' : 'text-ink'
+                      active ? 'bg-surface-hover font-bold' : ''
                     }`}
                   >
                     <span>{a.label}</span>
