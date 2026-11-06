@@ -20,12 +20,13 @@ import {
 import { privateKeyToAccount } from 'viem/accounts'
 import { fetchActivity } from './activity'
 import { ANVIL_ACCOUNTS, DEV_ACCOUNTS, POLL_MS, PRICE_API, RPC_URL } from './config'
+import { type Eip1193, type WalletOption, rememberWallet, rememberedWallet, useWalletOptions, walletError } from './wallets'
 
 export type Wallet = WalletClient<Transport, Chain, Account>
 
 export type Signer =
   | { kind: 'dev'; index: number; label: string; address: Address }
-  | { kind: 'injected'; label: string; address: Address }
+  | { kind: 'injected'; label: string; address: Address; walletId: string }
 
 interface StabrixContext {
   deployment: Deployment
@@ -35,7 +36,9 @@ interface StabrixContext {
   signer: Signer | null
   wallet: Wallet | null
   setSigner: (s: Signer | null) => void
-  connectInjected: () => Promise<void>
+  wallets: WalletOption[]
+  connectInjected: (option: WalletOption) => Promise<void>
+  disconnect: () => void
 }
 
 const Ctx = createContext<StabrixContext | null>(null)
@@ -61,7 +64,7 @@ async function fetchDeployment(): Promise<Deployment> {
 
 declare global {
   interface Window {
-    ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
+    ethereum?: Eip1193
   }
 }
 
@@ -84,7 +87,10 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
   const client = useMemo(() => new StabrixClient(publicClient, deployment), [publicClient, deployment])
 
   const [signer, setSigner] = useState<Signer | null>(null)
+  const [provider, setProvider] = useState<Eip1193 | null>(null)
+  const wallets = useWalletOptions()
   const autoSelected = useRef(false)
+  const reconnected = useRef(false)
 
   useEffect(() => {
     if (!DEV_ACCOUNTS || autoSelected.current) return
@@ -100,40 +106,84 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
       if (!entry) return null
       return createWalletClient({ chain, account: privateKeyToAccount(entry.key), transport: http(RPC_URL) })
     }
-    if (typeof window === 'undefined' || !window.ethereum) return null
+    if (!provider) return null
     return createWalletClient({
       chain,
       account: { address: signer.address, type: 'json-rpc' } as Account,
-      transport: custom(window.ethereum),
+      transport: custom(provider),
     }) as Wallet
-  }, [signer, chain])
+  }, [signer, chain, provider])
 
-  const connectInjected = async () => {
-    if (!window.ethereum) throw new Error('No browser wallet found')
-    const [address] = (await window.ethereum.request({ method: 'eth_requestAccounts' })) as string[]
-    if (!address) throw new Error('No account selected')
-    const chainId = `0x${chain.id.toString(16)}`
-    try {
-      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId }] })
-    } catch (e) {
-      if ((e as { code?: number }).code !== 4902) throw e
-      await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [
-          {
-            chainId,
-            chainName: chain.name,
-            nativeCurrency: chain.nativeCurrency,
-            rpcUrls: [RPC_URL],
-            blockExplorerUrls: EXPLORERS[chain.id] ? [EXPLORERS[chain.id]] : undefined,
-          },
-        ],
+  useEffect(() => {
+    if (reconnected.current || signer || wallets.length === 0) return
+    const id = rememberedWallet()
+    const option = wallets.find((w) => w.id === id)
+    if (!option) return
+    reconnected.current = true
+    option.provider
+      .request({ method: 'eth_accounts' })
+      .then((accounts) => {
+        const [address] = accounts as string[]
+        if (!address) return
+        setProvider(option.provider)
+        setSigner({ kind: 'injected', label: option.name, address: getAddress(address), walletId: option.id })
       })
+      .catch(() => {})
+  }, [wallets, signer])
+
+  useEffect(() => {
+    if (!provider?.on || signer?.kind !== 'injected') return
+    const onAccounts = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        setSigner(null)
+        setProvider(null)
+        rememberWallet(null)
+      } else {
+        setSigner((s) => (s && s.kind === 'injected' ? { ...s, address: getAddress(accounts[0]!) } : s))
+      }
     }
-    setSigner({ kind: 'injected', label: 'Browser wallet', address: getAddress(address) })
+    provider.on('accountsChanged', onAccounts as (...args: never[]) => void)
+    return () => provider.removeListener?.('accountsChanged', onAccounts as (...args: never[]) => void)
+  }, [provider, signer?.kind])
+
+  const connectInjected = async (option: WalletOption) => {
+    const p = option.provider
+    try {
+      const [address] = (await p.request({ method: 'eth_requestAccounts' })) as string[]
+      if (!address) throw new Error('No account selected in the wallet.')
+      const chainId = `0x${chain.id.toString(16)}`
+      try {
+        await p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId }] })
+      } catch (e) {
+        if ((e as { code?: number }).code !== 4902) throw e
+        await p.request({
+          method: 'wallet_addEthereumChain',
+          params: [
+            {
+              chainId,
+              chainName: chain.name,
+              nativeCurrency: chain.nativeCurrency,
+              rpcUrls: [RPC_URL],
+              blockExplorerUrls: EXPLORERS[chain.id] ? [EXPLORERS[chain.id]] : undefined,
+            },
+          ],
+        })
+      }
+      setProvider(p)
+      setSigner({ kind: 'injected', label: option.name, address: getAddress(address), walletId: option.id })
+      rememberWallet(option.id)
+    } catch (e) {
+      throw new Error(walletError(e, option.name, chain.name))
+    }
   }
 
-  const value = { deployment, chain, publicClient, client, signer, wallet, setSigner, connectInjected }
+  const disconnect = () => {
+    setSigner(null)
+    setProvider(null)
+    rememberWallet(null)
+  }
+
+  const value = { deployment, chain, publicClient, client, signer, wallet, setSigner, wallets, connectInjected, disconnect }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
