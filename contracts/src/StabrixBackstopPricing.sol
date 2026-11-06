@@ -38,26 +38,56 @@ library StabrixBackstopPricing {
         (uint256 priceOut,, bool outHalted) = oracle.priceOf(q.tokenOut);
         if (outHalted) revert PayoutHalted(q.tokenOut);
 
-        uint256 unitIn = 10 ** c.decimals[i];
-        uint256 absorbed = real[i] * faceIn / unitIn;
-        uint256 incoming = s.amountIn * faceIn / unitIn;
-        if (absorbed + incoming > c.capPerToken) {
-            revert BackstopFull(q.tokenIn, c.capPerToken > absorbed ? c.capPerToken - absorbed : 0);
-        }
-
-        uint256 span = uint256(c.endDiscountBps - c.startDiscountBps);
-        uint256 twoCap = 2 * uint256(c.capPerToken);
-        uint256 discount =
-            _ceilDiv((uint256(c.startDiscountBps) * twoCap + span * (2 * absorbed + incoming)) * BPS_TO_WAD, twoCap);
-
-        uint256 valueOut = s.amountIn * marketIn * (WAD - discount) / (unitIn * WAD);
-        uint256 out = valueOut * 10 ** c.decimals[j] / priceOut;
-        if (out <= 1) revert ZeroAmount();
-        out -= 1;
+        uint256 out = quote(
+            Quote({
+                token: q.tokenIn,
+                amountIn: s.amountIn,
+                absorbedIn: real[i],
+                faceIn: faceIn,
+                marketIn: marketIn,
+                priceOut: priceOut,
+                decimalsIn: c.decimals[i],
+                decimalsOut: c.decimals[j],
+                startBps: c.startDiscountBps,
+                endBps: c.endDiscountBps,
+                cap: c.capPerToken
+            })
+        );
         if (out > real[j]) revert InsufficientReserve();
         StabrixPricing.checkWallet(aqua, q.maker, q.tokenOut, out);
         s.amountOut = out;
         return s;
+    }
+
+    struct Quote {
+        address token;
+        uint256 amountIn;
+        uint256 absorbedIn;
+        uint256 faceIn;
+        uint256 marketIn;
+        uint256 priceOut;
+        uint8 decimalsIn;
+        uint8 decimalsOut;
+        uint16 startBps;
+        uint16 endBps;
+        uint128 cap;
+    }
+
+    function quote(Quote memory x) internal pure returns (uint256 out) {
+        uint256 unitIn = 10 ** x.decimalsIn;
+        uint256 absorbed = x.absorbedIn * x.faceIn / unitIn;
+        uint256 incoming = x.amountIn * x.faceIn / unitIn;
+        if (absorbed + incoming > x.cap) revert BackstopFull(x.token, x.cap > absorbed ? x.cap - absorbed : 0);
+
+        uint256 span = uint256(x.endBps - x.startBps);
+        uint256 twoCap = 2 * uint256(x.cap);
+        uint256 discount =
+            _ceilDiv((uint256(x.startBps) * twoCap + span * (2 * absorbed + incoming)) * BPS_TO_WAD, twoCap);
+
+        uint256 valueOut = x.amountIn * x.marketIn * (WAD - discount) / (unitIn * WAD);
+        out = valueOut * 10 ** x.decimalsOut / x.priceOut;
+        if (out <= 1) revert ZeroAmount();
+        out -= 1;
     }
 
     function _ceilDiv(uint256 a, uint256 b) private pure returns (uint256) {
