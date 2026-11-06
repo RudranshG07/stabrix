@@ -15,6 +15,8 @@ import {StabrixOracle} from "../../src/StabrixOracle.sol";
 import {StabrixBackstop} from "../../src/StabrixBackstop.sol";
 import {MockStablecoin} from "../../src/mocks/MockStablecoin.sol";
 
+address constant CRE_SIMULATION_OWNER = 0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa;
+
 abstract contract StabrixFixture is Test {
     uint256 internal N;
     uint256 internal constant W = 1e18;
@@ -35,6 +37,10 @@ abstract contract StabrixFixture is Test {
     address internal lp2 = makeAddr("lp2");
     address internal trader = makeAddr("trader");
 
+    function meta() internal pure returns (bytes memory) {
+        return abi.encodePacked(bytes32(0), bytes10(0), CRE_SIMULATION_OWNER, bytes2(0x0001));
+    }
+
     function setUp() public virtual {
         aqua = new Aqua();
         pricer = new StabrixExtruction(address(aqua));
@@ -43,7 +49,7 @@ abstract contract StabrixFixture is Test {
         lens = new StabrixLens(address(aqua));
         batch = new StabrixBatchTaker();
         oracle = new StabrixOracle(forwarder, address(this), 900, 50);
-        oracle.setAnyWorkflow(true);
+        oracle.setWorkflowOwner(CRE_SIMULATION_OWNER);
 
         (string[] memory symbols, uint8[] memory decs) = specs();
         N = symbols.length;

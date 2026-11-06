@@ -105,15 +105,15 @@ contract StabrixRouterTest is StabrixFixture {
         bytes memory report = abi.encode(t, p, hlt, uint64(block.timestamp));
 
         vm.expectRevert(abi.encodeWithSelector(StabrixOracle.UnauthorizedForwarder.selector, address(this)));
-        oracle.onReport("", report);
+        oracle.onReport(meta(), report);
 
         vm.prank(forwarder);
-        oracle.onReport("", report);
+        oracle.onReport(meta(), report);
         assertTrue(oracle.isHalted(tokens[2]));
 
         hlt[0] = false;
         vm.prank(forwarder);
-        oracle.onReport("", abi.encode(t, p, hlt, uint64(block.timestamp)));
+        oracle.onReport(meta(), abi.encode(t, p, hlt, uint64(block.timestamp)));
         assertTrue(oracle.isHalted(tokens[2]), "stale report ignored");
 
         fund(trader, 2, unit(2), address(router));
@@ -166,7 +166,7 @@ contract StabrixRouterTest is StabrixFixture {
         t[0] = tokens[3];
         p[0] = 1e18;
         vm.prank(forwarder);
-        oracle.onReport("", abi.encode(t, p, hlt, uint64(block.timestamp)));
+        oracle.onReport(meta(), abi.encode(t, p, hlt, uint64(block.timestamp)));
         assertTrue(oracle.isHalted(tokens[3]), "calm CRE report does not lift a guardian halt");
 
         fund(trader, 3, unit(3), address(router));
@@ -183,7 +183,7 @@ contract StabrixRouterTest is StabrixFixture {
         p[0] = 0.9e18;
         hlt[0] = true;
         vm.prank(forwarder);
-        oracle.onReport("", abi.encode(t, p, hlt, uint64(block.timestamp)));
+        oracle.onReport(meta(), abi.encode(t, p, hlt, uint64(block.timestamp)));
         assertTrue(oracle.isHalted(tokens[2]));
         oracle.guardianSet(tokens[2], false);
         assertFalse(oracle.isHalted(tokens[2]));

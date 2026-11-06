@@ -98,7 +98,7 @@ contract StabrixFxTest is FxFixture {
         uint64 future = uint64(block.timestamp + 301);
         vm.prank(forwarder);
         vm.expectRevert(abi.encodeWithSelector(StabrixOracle.FutureReport.selector, future));
-        oracle.onReport("", abi.encode(t, p, hlt, future));
+        oracle.onReport(meta(), abi.encode(t, p, hlt, future));
     }
 
     function test_StaleFeedRefusesFxRangeButNotUsdRange() public {

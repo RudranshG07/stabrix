@@ -111,7 +111,7 @@ abstract contract FxFixture is StabrixFixture {
         bool[] memory hlt = new bool[](1);
         (t[0], p[0], hlt[0]) = (token, priceE18, halted);
         vm.prank(forwarder);
-        oracle.onReport("", abi.encode(t, p, hlt, observedAt));
+        oracle.onReport(meta(), abi.encode(t, p, hlt, observedAt));
     }
 
     function _radius(bytes32 h, address maker, uint256 floor) internal view returns (uint256) {

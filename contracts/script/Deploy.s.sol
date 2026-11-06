@@ -11,7 +11,7 @@ import {StabrixBackstop} from "../src/StabrixBackstop.sol";
 import {StabrixBatchTaker} from "../src/StabrixBatchTaker.sol";
 import {StabrixOracle} from "../src/StabrixOracle.sol";
 import {MockStablecoin} from "../src/mocks/MockStablecoin.sol";
-import {MockFeed} from "../src/mocks/MockFeed.sol";
+import {TestnetFeed} from "../src/mocks/TestnetFeed.sol";
 import {Aqua} from "@1inch/aqua/src/Aqua.sol";
 import {AquaSwapVMRouter} from "@1inch/swap-vm/src/routers/AquaSwapVMRouter.sol";
 
@@ -54,7 +54,6 @@ contract Deploy is Script {
         StabrixBatchTaker batch = new StabrixBatchTaker();
         StabrixOracle oracle = new StabrixOracle(forwarder, deployer, REPORT_MAX_AGE, MAX_DEVIATION_BPS);
         if (workflowOwner != address(0)) oracle.setWorkflowOwner(workflowOwner);
-        if (vm.envOr("CRE_ANY_WORKFLOW", false)) oracle.setAnyWorkflow(true);
         if (coins.length == 0) coins = _mockCoins();
         for (uint256 k; k < coins.length; ++k) {
             if (coins[k].feed != address(0)) oracle.setFeed(coins[k].token, coins[k].feed, FEED_MAX_AGE);
@@ -114,11 +113,11 @@ contract Deploy is Script {
             ["USD Coin", "Tether USD", "Dai Stablecoin", "USDS Stablecoin", "USDe", "EURC", "BRZ", "IDRX"];
         string[8] memory symbols = ["USDC", "USDT", "DAI", "USDS", "USDe", "EURC", "BRZ", "IDRX"];
         uint8[8] memory decs = [6, 6, 18, 18, 18, 6, 18, 2];
-        int256[8] memory usdE8 = [int256(0), 0, 0, 0, 0, 1.12e8, 0.18e8, 5530];
+        int256[8] memory usdE8 = [int256(0), 0, 0, 0, 0, 1.1164e8, 0.1817e8, 5524];
         c = new Coin[](8);
         for (uint256 k; k < 8; ++k) {
             c[k].token = address(new MockStablecoin(names[k], symbols[k], decs[k]));
-            if (usdE8[k] != 0) c[k].feed = address(new MockFeed(8, usdE8[k]));
+            if (usdE8[k] != 0) c[k].feed = address(new TestnetFeed(usdE8[k]));
         }
     }
 

@@ -31,6 +31,8 @@ interface IForwarder {
     ) external;
 }
 
+address constant CRE_SIMULATION_OWNER = 0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa;
+
 /// BASE_RPC_URL=https://mainnet.base.org forge test --match-path test/fork/BaseFork.t.sol
 contract BaseForkTest is Test {
     address constant AQUA = 0x1111113CCf1426A8E30e2bfF5E005d929bF6a90a;
@@ -103,7 +105,7 @@ contract BaseForkTest is Test {
 
     function _oracle(address forwarder) internal returns (StabrixOracle o) {
         o = new StabrixOracle(forwarder, address(this), 900, 50);
-        if (forwarder == CRE_SIM_FORWARDER) o.setAnyWorkflow(true);
+        if (forwarder == CRE_SIM_FORWARDER) o.setWorkflowOwner(CRE_SIMULATION_OWNER);
         o.setFeed(EURC, 0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F, FEED_MAX_AGE);
         o.setFeed(BRZ, 0x0b0E64c05083FdF9ED7C5D3d8262c4216eFc9394, FEED_MAX_AGE);
         o.setFeed(IDRX, 0x05A6cF213EcC5501A11a08EBefA4A8a60313ef97, FEED_MAX_AGE);
@@ -227,7 +229,7 @@ contract BaseForkTest is Test {
         assertFalse(oracle.isHalted(USDE));
     }
 
-    function test_SimForwarderAcceptsAnyone_DemoOracleOnly() public forked {
+    function test_SimForwarderReportsAsSimulationOwner() public forked {
         StabrixOracle demo = _oracle(CRE_SIM_FORWARDER);
         ISwapVM.Order memory order = lens.buildExtructionOrder(address(ext), lp, _config(demo), 3);
         _ship(OFFICIAL_ROUTER, order, demo);
@@ -302,7 +304,7 @@ contract BaseForkTest is Test {
             uint32(1),
             bytes32(0),
             bytes10(0),
-            address(0),
+            CRE_SIMULATION_OWNER,
             bytes2(0x0001)
         );
         return bytes.concat(metadata, abi.encode(t, p, h, uint64(block.timestamp)));

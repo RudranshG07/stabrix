@@ -14,7 +14,8 @@ interface IReceiver is IERC165 {
 /// @notice USD prices for Stabrix. Tokens without a feed are pegged at $1. FX tokens use the CRE market price
 /// when it is fresh and within maxDeviationBps of their Chainlink feed, otherwise the feed; a stale feed refuses.
 /// A halted token has a depeg price for backstops: the lower of the fresh CRE price and its Chainlink market feed.
-/// Reports are refused until a workflow owner is set, unless the owner opts in to any workflow (fork or demo only).
+/// Reports are refused until a workflow owner is set. CRE simulations report as 0xaAaA...aAaA, so fork and testnet
+/// oracles set that owner; production sets the deployed workflow's owner.
 /// Guardian halts are separate from CRE halts, so a calm report cannot lift them.
 /// Report: abi.encode(address[] tokens, uint256[] marketPricesE18, bool[] halted, uint64 observedAt)
 contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
@@ -36,7 +37,6 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
 
     address public forwarder;
     address public workflowOwner;
-    bool public anyWorkflow;
     uint32 public reportMaxAge;
     uint16 public maxDeviationBps;
     mapping(address token => Status) public status;
@@ -46,7 +46,6 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
 
     event ForwarderSet(address forwarder);
     event WorkflowOwnerSet(address workflowOwner);
-    event AnyWorkflowSet(bool anyWorkflow);
     event LimitsSet(uint32 reportMaxAge, uint16 maxDeviationBps);
     event FeedSet(address indexed token, address feed, uint32 maxAge);
     event MarketFeedSet(address indexed token, address feed, uint32 maxAge);
@@ -117,13 +116,10 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
 
     function onReport(bytes calldata metadata, bytes calldata report) external {
         if (msg.sender != forwarder) revert UnauthorizedForwarder(msg.sender);
-        if (workflowOwner != address(0)) {
-            if (metadata.length < 62) revert MalformedReport();
-            address reporter = address(bytes20(metadata[42:62]));
-            if (reporter != workflowOwner) revert UnauthorizedWorkflowOwner(reporter);
-        } else if (!anyWorkflow) {
-            revert WorkflowOwnerNotSet();
-        }
+        if (workflowOwner == address(0)) revert WorkflowOwnerNotSet();
+        if (metadata.length < 62) revert MalformedReport();
+        address reporter = address(bytes20(metadata[42:62]));
+        if (reporter != workflowOwner) revert UnauthorizedWorkflowOwner(reporter);
 
         (address[] memory tokens, uint256[] memory pricesE18, bool[] memory halted, uint64 observedAt) =
             abi.decode(report, (address[], uint256[], bool[], uint64));
@@ -159,11 +155,6 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
     function setWorkflowOwner(address workflowOwner_) external onlyOwner {
         workflowOwner = workflowOwner_;
         emit WorkflowOwnerSet(workflowOwner_);
-    }
-
-    function setAnyWorkflow(bool anyWorkflow_) external onlyOwner {
-        anyWorkflow = anyWorkflow_;
-        emit AnyWorkflowSet(anyWorkflow_);
     }
 
     function setLimits(uint32 reportMaxAge_, uint16 maxDeviationBps_) external onlyOwner {
