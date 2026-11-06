@@ -1,7 +1,7 @@
 import { StabrixClient, type Venue, WAD, buildBackstopOrder, buildOrder } from '@stabrix/sdk'
-import { type Address, type Hex, createWalletClient, formatUnits, http } from 'viem'
+import { type Address, createWalletClient, formatUnits, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { RPC_URL, connect, loadDeployment } from './env.js'
+import { RPC_URL, connect, deployerKey, loadDeployment } from './env.js'
 
 const MIN_COIN_USD = Number(process.env.MIN_COIN_USD ?? '1')
 const RANGE_SHARE = 0.9
@@ -9,8 +9,7 @@ const BACKSTOP = { startBps: 200, endBps: 1000 }
 const SALTS = { balanced: 1n, wide: 2n, backstop: 3n }
 
 async function main() {
-  const key = process.env.PRIVATE_KEY as Hex | undefined
-  if (!key) throw new Error('PRIVATE_KEY is required')
+  const key = deployerKey()
   const c = await connect()
   if (c.chainId !== 8453) throw new Error(`expected Base mainnet (8453), got ${c.chainId}`)
   const d = loadDeployment(c.chainId)

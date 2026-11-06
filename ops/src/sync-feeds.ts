@@ -1,7 +1,7 @@
-import { type Hex, createPublicClient, createWalletClient, http, parseAbi, zeroAddress } from 'viem'
+import { createPublicClient, createWalletClient, http, parseAbi, zeroAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { base } from 'viem/chains'
-import { RPC_URL, connect, loadDeployment } from './env.js'
+import { RPC_URL, connect, deployerKey, loadDeployment } from './env.js'
 
 const MAINNET_FX: Record<string, `0x${string}`> = {
   EURC: '0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F',
@@ -15,8 +15,7 @@ const feedAbi = parseAbi([
 ])
 
 async function main() {
-  const key = process.env.PRIVATE_KEY as Hex | undefined
-  if (!key) throw new Error('PRIVATE_KEY is required')
+  const key = deployerKey()
   const c = await connect()
   if (c.chainId === 8453) throw new Error('Base mainnet uses real Chainlink feeds; nothing to sync')
   const d = loadDeployment(c.chainId)

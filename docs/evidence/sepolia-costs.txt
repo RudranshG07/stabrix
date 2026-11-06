@@ -1,0 +1,35 @@
+Base Sepolia (chain 84532), after `npm run seed:testnet` added a Tight range of $5,000,000 per coin on the 1inch router.
+Cost is the dollar value lost against the oracle price, fees included. Liquidity is test coins.
+
+$ RPC_URL=https://base-sepolia-rpc.publicnode.com npm run costs -w @stabrix/ops
+chain 84532, 4 ranges, block 55362166
+pair        size       out                  cost (bps)  legs
+USDC>DAI    $1,000     999.9 DAI            1.01        1
+USDC>DAI    $10,000    9,998.88 DAI         1.12        1
+USDC>DAI    $100,000   99,977.85 DAI        2.21        1
+USDC>EURC   $1,000     896.59 EURC          5.01        1
+USDC>EURC   $10,000    8,965.79 EURC        5.12        1
+USDC>EURC   $100,000   89,648.06 EURC       6.21        1
+
+Before the reseed (three small ranges, already tilted by earlier swaps):
+USDC>DAI    $10,000    9,984.68 DAI         15.32       3
+USDC>DAI    $100,000   71,863.23 DAI        250.02      3 (partial fill)
+
+Live trades from fresh wallets, each equal to its quote:
+
+$ npm run trade:testnet -w @stabrix/ops -- USDC DAI 10000
+trader 0x2A1530075EE9Ef866d8B42EB85B4464d958650D4
+swapped 10000 USDC for 9998.878535597934848022 DAI (quote 9998.878535597934848022), cost 1.12 bps over 1 leg(s)
+tx 0xe8c89fee79fec9cb8daaa142a622a409e00c1d579c22ed34b7968109bfd63003
+
+$ npm run trade:testnet -w @stabrix/ops -- USDC EURC 10000
+trader 0x97688F74eDad7340a67666013Cfc427dDDE23f27
+swapped 10000 USDC for 8965.676818 EURC (quote 8965.676818), cost 5.24 bps over 1 leg(s)
+tx 0x02cb7a187e5521a770386bb79b6ec95bcb15109785a4494c2e6c2e586dc5895d
+
+Those two trades and the depeg demo left the deep range holding extra USDC, so two reverse trades brought it back:
+swapped 10000 DAI for 9999.381731 USDC (quote 9999.381731), cost 0.61 bps: 0x3d3a59109eb89e79d0bb623ab4786962af289812284efff139d21037c96161af
+swapped 8970.379805 EURC for 9995.132816 USDC (quote 9995.132816), cost 4.86 bps: 0xe7a310de1ea40c769adbece652b0731489fb0115ba026894d853d2b6b6c169a7
+After: USDC>DAI 1.03 / 1.14 / 2.23 bps, USDC>EURC 5.02 / 5.13 / 6.22 bps at $1k / $10k / $100k.
+
+The USD to EUR floor is the 5 bps FX fee of the Tight preset; USD to USD pays a 1 bp fee.

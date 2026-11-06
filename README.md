@@ -88,7 +88,11 @@ All on a Base mainnet fork with real tokens and both 1inch routers, unless noted
 
 | | Result |
 |---|---|
-| 10,000 USDC to DAI | 9,986.96 DAI (0.13%), SDK quote equal to the chain to the wei |
+| $10,000 USDC to DAI, live on Base Sepolia from a fresh wallet | 9,998.88 DAI, 1.12 bps with the fee, equal to the quote: [0xe8c89fee...3003](https://sepolia.basescan.org/tx/0xe8c89fee79fec9cb8daaa142a622a409e00c1d579c22ed34b7968109bfd63003) |
+| $10,000 USDC to EURC, live on Base Sepolia | 8,965.68 EURC, 5.24 bps with the FX fee: [0x02cb7a18...895d](https://sepolia.basescan.org/tx/0x02cb7a187e5521a770386bb79b6ec95bcb15109785a4494c2e6c2e586dc5895d) |
+| Base Sepolia cost table (`npm run costs`) | USD to USD: 1.01 / 1.12 / 2.21 bps at $1k / $10k / $100k. USD to EUR: 5.01 / 5.12 / 6.21 bps. Log in `docs/evidence/sepolia-costs.txt` |
+| Depeg on Base Sepolia (`npm run depeg:testnet`) | Guardian halts test USDe at $0.93, every range refuses it, a fresh wallet sells 5,000 USDe to two backstops (one per router) for 4,549.25 USDC: [0x01521a82...b7b8](https://sepolia.basescan.org/tx/0x01521a820a999ee5489f34f18d396965eb1f602f6b58e6c10caabc39e0ddb7b8), then resumed. Log in `docs/evidence/sepolia-depeg.txt` |
+| 10,000 USDC to DAI on the fork | 9,986.96 DAI (0.13%) with thin seed liquidity, SDK quote equal to the chain to the wei |
 | 5,000 USDC to EURC | 4,468.37 EURC, 0.23% against Chainlink EUR/USD, FX fee included |
 | USDe falls to $0.93 | Ranges refuse USDe after the halt; backstop makers end +1.86% and +1.12% |
 | EURC crashed 7% with the real CRE workflow | Halted ("offchain 700bps >= hard 300bps"), backstops bought 35,829 EURC up to their $20,000 caps, then a second run resumed it |
@@ -150,7 +154,7 @@ This writes `deployments/84532.json`.
 | 1inch Aqua (unmodified source) | [0x9C1c395C0B1B15eF4DE0B618597b1e221b7E2128](https://sepolia.basescan.org/address/0x9C1c395C0B1B15eF4DE0B618597b1e221b7E2128) |
 | 1inch AquaSwapVMRouter (unmodified source) | [0xd7451569651a98870d8519Ae6eCbEA94024B6416](https://sepolia.basescan.org/address/0xd7451569651a98870d8519Ae6eCbEA94024B6416) |
 
-Seeded with three FX ranges (Tight and Balanced on the Stabrix router, Wide on the 1inch router) and one Standard backstop. A test swap of 1,000 USDC for 999.75 DAI: [0x550fba65...4bc6](https://sepolia.basescan.org/tx/0x550fba656dce936c1752d838825e23b9a85335b272238882ee6572e458844bc6). A real CRE CLI simulation wrote live CoinGecko and DefiLlama prices to the oracle: [0x9b38b774...7e77](https://sepolia.basescan.org/tx/0x9b38b774b71255ec54cd13c0ba9a76d2d16f0699919890a8557e45ebf7697e77), log in `docs/evidence/cre-simulate-sepolia.txt`.
+Seeded with test coins (free to mint) by `npm run seed:testnet`: four FX ranges, the deepest a Tight range of $5,000,000 per coin on the 1inch router, plus Tight, Balanced and Wide ranges, and two Standard backstops (caps of $20,000 and $100,000 per halted coin) pledging $130,000 of USDC and $130,000 of USDT in total from the same wallet. A first test swap of 1,000 USDC for 999.75 DAI: [0x550fba65...4bc6](https://sepolia.basescan.org/tx/0x550fba656dce936c1752d838825e23b9a85335b272238882ee6572e458844bc6). A real CRE CLI simulation wrote live CoinGecko and DefiLlama prices to the oracle: [0x9b38b774...7e77](https://sepolia.basescan.org/tx/0x9b38b774b71255ec54cd13c0ba9a76d2d16f0699919890a8557e45ebf7697e77), log in `docs/evidence/cre-simulate-sepolia.txt`.
 
 `https://sepolia.base.org` limits `eth_getLogs` to 200 blocks, which is too small for strategy discovery. Use `https://base-sepolia-rpc.publicnode.com` as `RPC_URL` for ops and `NEXT_PUBLIC_RPC_URL` for the app.
  `0xaAaA...aAaA` is the owner the CRE simulator reports as; a production deploy sets the real workflow owner instead. `sync-feeds` copies today's Base mainnet Chainlink EUR, BRL and IDR rates into the testnet feeds. With `--broadcast` the simulation sends a real transaction from `CRE_ETH_PRIVATE_KEY` in `cre/.env`, so on Base Sepolia that must be your own key with test ETH, never a public anvil key.

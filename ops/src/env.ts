@@ -29,6 +29,12 @@ export const ANVIL_KEYS: readonly Hex[] = [
   '0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e',
 ]
 
+export function deployerKey(): Hex {
+  const key = process.env.PRIVATE_KEY?.trim()
+  if (!key) throw new Error('PRIVATE_KEY is required')
+  return (key.startsWith('0x') ? key : `0x${key}`) as Hex
+}
+
 export function loadDeployment(chainId: number): Deployment {
   const name = process.env.DEPLOYMENT_NAME ?? String(chainId)
   const raw = JSON.parse(readFileSync(join(ROOT, 'deployments', `${name}.json`), 'utf8'))

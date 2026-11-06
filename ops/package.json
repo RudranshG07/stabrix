@@ -12,7 +12,10 @@
     "inspect": "tsx src/inspect.ts",
     "seed:testnet": "tsx src/seed-testnet.ts",
     "seed:mainnet": "tsx src/seed-mainnet.ts",
-    "sync-feeds": "tsx src/sync-feeds.ts"
+    "sync-feeds": "tsx src/sync-feeds.ts",
+    "costs": "tsx src/costs.ts",
+    "trade:testnet": "tsx src/trade-testnet.ts",
+    "depeg:testnet": "tsx src/depeg-testnet.ts"
   },
   "dependencies": {
     "@stabrix/sdk": "0.1.0",

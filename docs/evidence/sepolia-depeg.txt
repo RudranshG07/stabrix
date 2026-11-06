@@ -1,0 +1,23 @@
+Depeg demo on Base Sepolia (chain 84532). Real coins on Sepolia never depeg, so the oracle owner plays the part:
+a guardian halt (an onchain function of StabrixOracle) plus a testnet market feed for the depeg price.
+
+$ npm run depeg:testnet -w @stabrix/ops -- halt USDe 0.93
+USDe market feed deployed at 0xe576c38aee4de71063aa5f18521df44d1c9f05cc: 0xb7ace427d007be0f616ecfb21fdc44634c401e7c72e73bb3e8db8a9d451fd9c3
+oracle reads it as the market price: 0x9851493575d71f54557c5300d95a44e3c9d8928f2ff6881ef594b2376b29e602
+USDe halted by the guardian: 0xe3e476cf5b5864aeb9de5d6adb04fd436b249ec15e9afa9126a8ba5787d735b1
+backstops now buy USDe below $0.93
+
+$ npm run depeg:testnet -w @stabrix/ops -- sell USDe 5000
+fresh taker 0x29bfB6a6C34724201e143e443e741B68F11F98b1
+gas for the taker: 0x9a327c036688ef23552c1a38df134d5c8aff1d6a3a59216567b3aa3362d13673
+taker gets 5000 test USDe: 0xe03dbe8e465eb5a7b411c0b2281dc5f0ed5cac8320ee8fa2163f816f42451e62
+every FX range refuses USDe: the oracle reverts Halted
+route: 2 leg(s), all backstop
+sold 5000 USDe for 4549.248483 USDC, quote 4549.248483: 0x01521a820a999ee5489f34f18d396965eb1f602f6b58e6c10caabc39e0ddb7b8
+
+$ npm run depeg:testnet -w @stabrix/ops -- resume USDe
+USDe resumed by the guardian: 0x1b5596434df54530b3c1520aaad99fc69c3b5c6d7acc102c74f39cbbaa462d3f
+USDe market price back to $1: 0x98ef928a204d9ae6b1d68f07842c4cae8168d7059fd059b9e0502b5c1d508335
+
+The two backstop legs ran on the Stabrix router and on 1inch's AquaSwapVMRouter in one transaction.
+4,549.25 USDC for 5,000 USDe is $0.93 minus the backstop discount (2% growing toward 10% as the cap fills).
