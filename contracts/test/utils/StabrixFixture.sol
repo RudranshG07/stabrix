@@ -12,6 +12,7 @@ import {StabrixConfig} from "../../src/StabrixConfig.sol";
 import {StabrixBatchTaker} from "../../src/StabrixBatchTaker.sol";
 import {StabrixExtruction} from "../../src/StabrixExtruction.sol";
 import {StabrixOracle} from "../../src/StabrixOracle.sol";
+import {StabrixBackstop} from "../../src/StabrixBackstop.sol";
 import {MockStablecoin} from "../../src/mocks/MockStablecoin.sol";
 
 abstract contract StabrixFixture is Test {
@@ -24,6 +25,7 @@ abstract contract StabrixFixture is Test {
     StabrixBatchTaker internal batch;
     StabrixExtruction internal pricer;
     StabrixOracle internal oracle;
+    StabrixBackstop internal backstop;
 
     address[] internal tokens;
     uint8[] internal decimals;
@@ -36,7 +38,8 @@ abstract contract StabrixFixture is Test {
     function setUp() public virtual {
         aqua = new Aqua();
         pricer = new StabrixExtruction(address(aqua));
-        router = new StabrixRouter(address(aqua), address(0), address(this), address(pricer));
+        backstop = new StabrixBackstop(address(aqua));
+        router = new StabrixRouter(address(aqua), address(0), address(this), address(pricer), address(backstop));
         lens = new StabrixLens(address(aqua));
         batch = new StabrixBatchTaker();
         oracle = new StabrixOracle(forwarder, address(this), 900, 50);
