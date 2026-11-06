@@ -1,4 +1,5 @@
 import katex from 'katex'
+import Image from 'next/image'
 import type { ReactNode } from 'react'
 import { DepegChart, ImpactChart } from './charts'
 import { Deployed } from './deployed'
@@ -56,10 +57,13 @@ const ICONS = {
   ),
 }
 
-function SecHead({ eb, title, intro, id }: { eb: string; title: ReactNode; intro?: ReactNode; id?: string }) {
+function SecHead({ eb, title, intro, id, logo }: { eb: string; title: ReactNode; intro?: ReactNode; id?: string; logo?: string }) {
   return (
     <header className="sec-head" id={id}>
-      <p className="eb">{eb}</p>
+      <p className="eb">
+        {logo && <Image src={logo} alt="" width={44} height={44} />}
+        {eb}
+      </p>
       <h2>{title}</h2>
       {intro && <p className="intro">{intro}</p>}
     </header>
@@ -392,6 +396,7 @@ export function Story() {
       <section className="sec">
         <SecHead
           id="aqua"
+          logo="/brand/1inch.png"
           eb="05 · Built for 1inch Aqua"
           title={
             <>
@@ -458,6 +463,7 @@ export function Story() {
       <section className="sec">
         <SecHead
           id="cre"
+          logo="/brand/chainlink.png"
           eb="06 · Built for Chainlink CRE"
           title={
             <>

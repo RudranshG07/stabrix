@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect } from 'react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LiveRates } from './live-rates'
@@ -598,8 +599,14 @@ export function Saltwake() {
               and backs every stablecoin when one breaks
             </p>
             <div className="stamps">
-              <span>1inch Aqua + SwapVM</span>
-              <span>Chainlink CRE</span>
+              <span>
+                <Image src="/brand/1inch.png" alt="" width={32} height={32} />
+                1inch Aqua + SwapVM
+              </span>
+              <span>
+                <Image src="/brand/chainlink.png" alt="" width={32} height={32} />
+                Chainlink CRE
+              </span>
               <span>Base</span>
             </div>
             <a href="#" className="pill" data-go="1">

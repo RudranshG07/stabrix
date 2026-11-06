@@ -1,14 +1,15 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { createPublicClient, fallback, http, parseAbi } from 'viem'
 import { base } from 'viem/chains'
 
 const FEEDS = [
-  { label: 'USDC/USD', address: '0x7e860098F58bBFC8648a4311b374B1D669a2bc6B', digits: 4 },
-  { label: 'EURC/USD', address: '0x9867186e52d2F1C2c565CDA6E747101Fa56501e0', digits: 4 },
-  { label: 'BRL/USD', address: '0x0b0E64c05083FdF9ED7C5D3d8262c4216eFc9394', digits: 4 },
-  { label: 'IDR/USD', address: '0x05A6cF213EcC5501A11a08EBefA4A8a60313ef97', digits: 7 },
+  { label: 'USDC/USD', coin: 'USDC', address: '0x7e860098F58bBFC8648a4311b374B1D669a2bc6B', digits: 4 },
+  { label: 'EURC/USD', coin: 'EURC', address: '0x9867186e52d2F1C2c565CDA6E747101Fa56501e0', digits: 4 },
+  { label: 'BRL/USD', coin: 'BRZ', address: '0x0b0E64c05083FdF9ED7C5D3d8262c4216eFc9394', digits: 4 },
+  { label: 'IDR/USD', coin: 'IDRX', address: '0x05A6cF213EcC5501A11a08EBefA4A8a60313ef97', digits: 7 },
 ] as const
 
 const abi = parseAbi(['function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)'])
@@ -54,6 +55,7 @@ export function LiveRates() {
       </span>
       {FEEDS.map((f, k) => (
         <span key={f.label}>
+          <Image src={`/coins/${f.coin}.png`} alt="" width={28} height={28} />
           {f.label} <b>{values[k]}</b>
         </span>
       ))}
