@@ -1,17 +1,13 @@
-import { type LiveBackstop, type LiveRange, type PriceInfo, StabrixClient, WAD, stabrixOracleAbi } from '@stabrix/sdk'
-import { type Address, concatHex, encodeAbiParameters, formatUnits, numberToHex, parseAbi, parseEther, parseUnits, zeroHash } from 'viem'
+import { type LiveBackstop, type LiveRange, type PriceInfo, StabrixClient, WAD } from '@stabrix/sdk'
+import { type Address, formatUnits, parseEther, parseUnits } from 'viem'
 import { dealERC20 } from './deal.js'
 import { connect, loadDeployment } from './env.js'
 
 const SYMBOL = process.argv[2] ?? 'USDe'
 const PRICE = process.argv[3] ?? '0.93'
-const REHEARSE_REPORT = process.argv.includes('--report')
 const DUMPER = 5
-const REPORTER = 6
 const CHUNK_USD = 2_000n
-const CRE_SIM_FORWARDER = '0x5E342a8438B4f5d39e72875FCee6f76B39CCE548' as const
 const priceApi = process.env.PRICE_API_URL ?? 'http://127.0.0.1:8790'
-const forwarderAbi = parseAbi(['function report(address receiver, bytes rawReport, bytes reportContext, bytes[] signatures)'])
 
 type Held = LiveRange | LiveBackstop
 
@@ -36,39 +32,6 @@ async function main() {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ symbol: SYMBOL, price: Number(PRICE) }),
   }).catch(() => console.warn(`price api not reachable at ${priceApi}`))
-
-  if (REHEARSE_REPORT) {
-    const forwarder = await c.publicClient.readContract({ address: d.oracle, abi: stabrixOracleAbi, functionName: 'forwarder' })
-    if (forwarder.toLowerCase() !== CRE_SIM_FORWARDER.toLowerCase()) {
-      throw new Error('rehearsal reports only work against an oracle wired to the CRE simulation forwarder')
-    }
-    const block = await c.publicClient.getBlock()
-    const metadata = concatHex([
-      '0x01',
-      zeroHash,
-      numberToHex(block.timestamp, { size: 4 }),
-      numberToHex(1, { size: 4 }),
-      numberToHex(1, { size: 4 }),
-      zeroHash,
-      numberToHex(0, { size: 10 }),
-      numberToHex(0, { size: 20 }),
-      '0x0001',
-    ])
-    const body = encodeAbiParameters(
-      [{ type: 'address[]' }, { type: 'uint256[]' }, { type: 'bool[]' }, { type: 'uint64' }],
-      [[bad.address], [priceE18], [true], block.timestamp],
-    )
-    const reporter = c.wallet(REPORTER)
-    await c.testClient.setBalance({ address: reporter.account.address, value: parseEther('10') })
-    const hash = await reporter.writeContract({
-      address: CRE_SIM_FORWARDER,
-      abi: forwarderAbi,
-      functionName: 'report',
-      args: [d.oracle, concatHex([metadata, body]), '0x', []],
-    })
-    await c.publicClient.waitForTransactionReceipt({ hash })
-    console.log(`rehearsal report: ${SYMBOL} halted at $${PRICE} (use cre workflow simulate for the real run)`)
-  }
 
   const dumper = c.wallet(DUMPER)
   await c.testClient.setBalance({ address: dumper.account.address, value: parseEther('100') })
