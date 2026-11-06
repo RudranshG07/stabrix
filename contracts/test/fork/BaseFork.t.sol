@@ -11,7 +11,9 @@ import {StabrixRouter} from "../../src/StabrixRouter.sol";
 import {StabrixLens} from "../../src/StabrixLens.sol";
 import {StabrixExtruction} from "../../src/StabrixExtruction.sol";
 import {StabrixConfig} from "../../src/StabrixConfig.sol";
+import {StabrixBackstopConfig} from "../../src/StabrixBackstopConfig.sol";
 import {StabrixOracle} from "../../src/StabrixOracle.sol";
+import {StabrixBackstop} from "../../src/StabrixBackstop.sol";
 
 interface IOfficialRouter {
     function AQUA() external view returns (address);
@@ -60,6 +62,7 @@ contract BaseForkTest is Test {
     StabrixLens internal lens;
     StabrixExtruction internal ext;
     StabrixOracle internal oracle;
+    StabrixBackstop internal bs;
 
     address internal lp = makeAddr("lp");
     address internal trader = makeAddr("trader");
@@ -94,6 +97,7 @@ contract BaseForkTest is Test {
 
         lens = new StabrixLens(AQUA);
         ext = new StabrixExtruction(AQUA);
+        bs = new StabrixBackstop(AQUA);
         oracle = _oracle(CRE_FORWARDER);
     }
 
@@ -190,7 +194,7 @@ contract BaseForkTest is Test {
     }
 
     function test_NativeRouterMatchesOfficialRouter_FxPair() public forked {
-        StabrixRouter native = new StabrixRouter(AQUA, WETH, address(this), address(ext));
+        StabrixRouter native = new StabrixRouter(AQUA, WETH, address(this), address(ext), address(bs));
         ISwapVM.Order memory viaExt = lens.buildExtructionOrder(address(ext), lp, _config(oracle), 7);
         ISwapVM.Order memory viaNative = lens.buildOrder(address(native), lp, _config(oracle), 7);
         _ship(OFFICIAL_ROUTER, viaExt, oracle);
@@ -238,6 +242,48 @@ contract BaseForkTest is Test {
         vm.expectRevert(abi.encodeWithSelector(StabrixOracle.Halted.selector, USDE));
         IOfficialRouter(OFFICIAL_ROUTER).swap(order, USDE, USDC, 5e18, _takerData());
         vm.stopPrank();
+    }
+
+    function test_BackstopBuysRealUSDeAfterCreDepegReport() public forked {
+        StabrixOracle demo = _oracle(CRE_SIM_FORWARDER);
+        demo.setMarketFeed(USDE, 0x790181e93e9F4Eedb5b864860C12e4d2CffFe73B, 90_000);
+
+        StabrixBackstopConfig.Config memory c;
+        c.tokens = tokens;
+        c.decimals = decimals;
+        c.startDiscountBps = 200;
+        c.endDiscountBps = 1000;
+        c.capPerToken = uint128(20_000e18);
+        c.oracle = address(demo);
+        ISwapVM.Order memory order = lens.buildBackstopExtructionOrder(address(bs), lp, c, 9);
+        uint256[] memory amounts = new uint256[](8);
+        uint256 usdc = 0;
+        for (uint256 k; k < 8; ++k) {
+            if (tokens[k] == USDC) usdc = k;
+        }
+        amounts[usdc] = 10_000e6;
+        deal(USDC, lp, 10_000e6);
+        vm.prank(lp);
+        IERC20Metadata(USDC).approve(AQUA, type(uint256).max);
+        vm.prank(lp);
+        IAqua(AQUA).ship(OFFICIAL_ROUTER, abi.encode(order), tokens, amounts);
+
+        deal(USDE, trader, 1000e18);
+        vm.startPrank(trader);
+        IERC20Metadata(USDE).approve(OFFICIAL_ROUTER, 1000e18);
+        vm.expectRevert(abi.encodeWithSelector(StabrixOracle.NotDepegged.selector, USDE));
+        IOfficialRouter(OFFICIAL_ROUTER).swap(order, USDE, USDC, 1000e18, _takerData());
+        vm.stopPrank();
+
+        bytes memory raw = _rawReport(USDE, true);
+        vm.prank(makeAddr("cre"));
+        IForwarder(CRE_SIM_FORWARDER).report(address(demo), raw, "", new bytes[](0));
+
+        uint256 out = _swap(OFFICIAL_ROUTER, order, USDE, USDC, 1000e18);
+        assertLe(out, 930e6 * 98 / 100, "at least the start discount below the CRE price");
+        assertGt(out, 930e6 * 97 / 100);
+        assertEq(IERC20Metadata(USDE).balanceOf(lp), 1000e18, "USDe lands in the maker wallet");
+        assertEq(IERC20Metadata(USDC).balanceOf(lp), 10_000e6 - out);
     }
 
     function _rawReport(address token, bool halted) internal view returns (bytes memory) {
