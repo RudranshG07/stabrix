@@ -180,3 +180,40 @@ describe('client quoting mirrors the contracts', () => {
     expect(legs.reduce((a, l) => a + l.amountIn, 0n)).toBe(q.filled)
   })
 })
+
+describe('log scanning', () => {
+  it('concurrent scans never duplicate events', async () => {
+    const { encodeAbiParameters, encodeEventTopics } = await import('viem')
+    const { aquaAbi } = await import('../src/index.js')
+    const topics = encodeEventTopics({ abi: aquaAbi, eventName: 'Docked' })
+    const log = {
+      address: deployment.aqua,
+      topics,
+      data: encodeAbiParameters(
+        [{ type: 'address' }, { type: 'address' }, { type: 'bytes32' }],
+        [addr(0x100), deployment.router, `0x${'ab'.repeat(32)}`],
+      ),
+      blockNumber: 5n,
+      transactionHash: `0x${'cd'.repeat(32)}`,
+      logIndex: 0,
+      blockHash: `0x${'ef'.repeat(32)}`,
+      transactionIndex: 0,
+      removed: false,
+    }
+    let calls = 0
+    const fake = {
+      getBlockNumber: async () => 10n,
+      getLogs: async () => {
+        calls++
+        await new Promise((r) => setTimeout(r, 20))
+        return [log]
+      },
+    } as unknown as PublicClient
+    const c = new StabrixClient(fake, deployment)
+    const scan = (c as unknown as { scan: () => Promise<bigint> }).scan.bind(c)
+    await Promise.all([scan(), scan(), scan()])
+    await scan()
+    expect(calls).toBe(1)
+    expect((c as unknown as { events: unknown[] }).events).toHaveLength(1)
+  })
+})

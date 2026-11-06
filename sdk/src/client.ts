@@ -103,6 +103,8 @@ export interface Quote extends SplitResult {
 export interface OracleStatus {
   token: Address
   halted: boolean
+  creHalted: boolean
+  guardianHalted: boolean
   observedAt: bigint
   reportedE18: bigint
 }
@@ -121,6 +123,8 @@ const DOCKED = getAbiItem({ abi: aquaAbi, name: 'Docked' })
 
 export class StabrixClient {
   private events: (ShipEvent | DockEvent)[] = []
+  private seen = new Set<string>()
+  private scanning: Promise<bigint> | null = null
   private scannedTo: bigint
   private readonly logChunk: bigint
 
@@ -147,7 +151,14 @@ export class StabrixClient {
     return venue.kind === 'native' ? this.deployment.router : this.deployment.officialRouter
   }
 
-  private async scan(): Promise<bigint> {
+  private scan(): Promise<bigint> {
+    this.scanning ??= this.scanOnce().finally(() => {
+      this.scanning = null
+    })
+    return this.scanning
+  }
+
+  private async scanOnce(): Promise<bigint> {
     const latest = await this.publicClient.getBlockNumber()
     while (this.scannedTo < latest) {
       const from = this.scannedTo + 1n
@@ -159,7 +170,12 @@ export class StabrixClient {
         toBlock: to,
       })
       const parsed = parseEventLogs({ abi: aquaAbi, logs, eventName: ['Shipped', 'Docked'] })
-      this.events.push(...(parsed as unknown as (ShipEvent | DockEvent)[]))
+      for (const ev of parsed) {
+        const id = `${ev.transactionHash}:${ev.logIndex}`
+        if (this.seen.has(id)) continue
+        this.seen.add(id)
+        this.events.push(ev as unknown as ShipEvent | DockEvent)
+      }
       this.scannedTo = to
     }
     return latest
@@ -232,7 +248,7 @@ export class StabrixClient {
     const results = await this.publicClient.multicall({
       contracts: tokens.flatMap((t) => [
         { address: oracle, abi: stabrixOracleAbi, functionName: 'priceOf', args: [t] } as const,
-        { address: oracle, abi: stabrixOracleAbi, functionName: 'status', args: [t] } as const,
+        { address: oracle, abi: stabrixOracleAbi, functionName: 'isHalted', args: [t] } as const,
         { address: oracle, abi: stabrixOracleAbi, functionName: 'feeds', args: [t] } as const,
       ]),
       allowFailure: true,
@@ -243,7 +259,7 @@ export class StabrixClient {
       const price = results[3 * k]!
       const status = results[3 * k + 1]!
       const feed = results[3 * k + 2]!
-      const halted = status.status === 'success' ? (status.result as readonly [boolean, bigint, bigint])[0] : false
+      const halted = status.status === 'success' ? (status.result as boolean) : false
       const fx = feed.status === 'success' && BigInt((feed.result as readonly [Address, number, number])[0]) !== 0n
       const priceE18 = price.status === 'success' ? (price.result as readonly [bigint, boolean, boolean])[0] : null
       out.set(t.toLowerCase(), { priceE18, fx, halted, depegE18: null })
@@ -533,18 +549,25 @@ export class StabrixClient {
 
   async oracleStatus(): Promise<OracleStatus[]> {
     const tokens = this.deployment.tokens.map((t) => t.address)
+    const oracle = this.deployment.oracle
     const results = await this.publicClient.multicall({
-      contracts: tokens.map((t) => ({
-        address: this.deployment.oracle,
-        abi: stabrixOracleAbi,
-        functionName: 'status',
-        args: [t],
-      })) as never,
+      contracts: tokens.flatMap((t) => [
+        { address: oracle, abi: stabrixOracleAbi, functionName: 'status', args: [t] } as const,
+        { address: oracle, abi: stabrixOracleAbi, functionName: 'guardianHalted', args: [t] } as const,
+      ]),
       allowFailure: false,
     })
     return tokens.map((token, k) => {
-      const [halted, observedAt, reportedE18] = results[k] as unknown as readonly [boolean, bigint, bigint]
-      return { token, halted, observedAt: BigInt(observedAt), reportedE18: BigInt(reportedE18) }
+      const [creHalted, observedAt, reportedE18] = results[2 * k] as unknown as readonly [boolean, bigint, bigint]
+      const guardianHalted = results[2 * k + 1] as unknown as boolean
+      return {
+        token,
+        halted: creHalted || guardianHalted,
+        creHalted,
+        guardianHalted,
+        observedAt: BigInt(observedAt),
+        reportedE18: BigInt(reportedE18),
+      }
     })
   }
 
