@@ -103,6 +103,7 @@ contract BaseForkTest is Test {
 
     function _oracle(address forwarder) internal returns (StabrixOracle o) {
         o = new StabrixOracle(forwarder, address(this), 900, 50);
+        if (forwarder == CRE_SIM_FORWARDER) o.setAnyWorkflow(true);
         o.setFeed(EURC, 0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F, FEED_MAX_AGE);
         o.setFeed(BRZ, 0x0b0E64c05083FdF9ED7C5D3d8262c4216eFc9394, FEED_MAX_AGE);
         o.setFeed(IDRX, 0x05A6cF213EcC5501A11a08EBefA4A8a60313ef97, FEED_MAX_AGE);

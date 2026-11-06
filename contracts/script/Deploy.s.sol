@@ -54,6 +54,7 @@ contract Deploy is Script {
         StabrixBatchTaker batch = new StabrixBatchTaker();
         StabrixOracle oracle = new StabrixOracle(forwarder, deployer, REPORT_MAX_AGE, MAX_DEVIATION_BPS);
         if (workflowOwner != address(0)) oracle.setWorkflowOwner(workflowOwner);
+        if (vm.envOr("CRE_ANY_WORKFLOW", false)) oracle.setAnyWorkflow(true);
         if (coins.length == 0) coins = _mockCoins();
         for (uint256 k; k < coins.length; ++k) {
             if (coins[k].feed != address(0)) oracle.setFeed(coins[k].token, coins[k].feed, FEED_MAX_AGE);

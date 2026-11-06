@@ -43,6 +43,7 @@ abstract contract StabrixFixture is Test {
         lens = new StabrixLens(address(aqua));
         batch = new StabrixBatchTaker();
         oracle = new StabrixOracle(forwarder, address(this), 900, 50);
+        oracle.setAnyWorkflow(true);
 
         (string[] memory symbols, uint8[] memory decs) = specs();
         N = symbols.length;

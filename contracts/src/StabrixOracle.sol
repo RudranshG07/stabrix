@@ -14,6 +14,8 @@ interface IReceiver is IERC165 {
 /// @notice USD prices for Stabrix. Tokens without a feed are pegged at $1. FX tokens use the CRE market price
 /// when it is fresh and within maxDeviationBps of their Chainlink feed, otherwise the feed; a stale feed refuses.
 /// A halted token has a depeg price for backstops: the lower of the fresh CRE price and its Chainlink market feed.
+/// Reports are refused until a workflow owner is set, unless the owner opts in to any workflow (fork or demo only).
+/// Guardian halts are separate from CRE halts, so a calm report cannot lift them.
 /// Report: abi.encode(address[] tokens, uint256[] marketPricesE18, bool[] halted, uint64 observedAt)
 contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
     uint256 internal constant WAD = 1e18;
@@ -34,14 +36,17 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
 
     address public forwarder;
     address public workflowOwner;
+    bool public anyWorkflow;
     uint32 public reportMaxAge;
     uint16 public maxDeviationBps;
     mapping(address token => Status) public status;
     mapping(address token => Feed) public feeds;
     mapping(address token => Feed) public marketFeeds;
+    mapping(address token => bool) public guardianHalted;
 
     event ForwarderSet(address forwarder);
     event WorkflowOwnerSet(address workflowOwner);
+    event AnyWorkflowSet(bool anyWorkflow);
     event LimitsSet(uint32 reportMaxAge, uint16 maxDeviationBps);
     event FeedSet(address indexed token, address feed, uint32 maxAge);
     event MarketFeedSet(address indexed token, address feed, uint32 maxAge);
@@ -50,6 +55,7 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
 
     error UnauthorizedForwarder(address sender);
     error UnauthorizedWorkflowOwner(address owner);
+    error WorkflowOwnerNotSet();
     error MalformedReport();
     error FutureReport(uint64 observedAt);
     error Halted(address token);
@@ -73,7 +79,7 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
         for (uint256 k; k < tokens.length; ++k) {
             address t = tokens[k];
             Status memory s = status[t];
-            if (t == tokenIn && s.halted) revert Halted(t);
+            if (t == tokenIn && (s.halted || guardianHalted[t])) revert Halted(t);
             Feed memory f = feeds[t];
             if (address(f.feed) == address(0)) {
                 pricesE18[k] = WAD;
@@ -89,12 +95,12 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
         Feed memory f = feeds[token];
         fx = address(f.feed) != address(0);
         priceE18 = fx ? _fxPrice(token, f, s) : WAD;
-        halted = s.halted;
+        halted = s.halted || guardianHalted[token];
     }
 
     function depegPrice(address token) external view returns (uint256 priceE18) {
         Status memory s = status[token];
-        if (!s.halted) revert NotDepegged(token);
+        if (!s.halted && !guardianHalted[token]) revert NotDepegged(token);
         priceE18 = type(uint256).max;
         if (s.priceE18 != 0 && block.timestamp <= uint256(s.observedAt) + reportMaxAge) priceE18 = s.priceE18;
         Feed memory f = marketFeeds[token];
@@ -106,7 +112,7 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
     }
 
     function isHalted(address token) external view returns (bool) {
-        return status[token].halted;
+        return status[token].halted || guardianHalted[token];
     }
 
     function onReport(bytes calldata metadata, bytes calldata report) external {
@@ -115,6 +121,8 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
             if (metadata.length < 62) revert MalformedReport();
             address reporter = address(bytes20(metadata[42:62]));
             if (reporter != workflowOwner) revert UnauthorizedWorkflowOwner(reporter);
+        } else if (!anyWorkflow) {
+            revert WorkflowOwnerNotSet();
         }
 
         (address[] memory tokens, uint256[] memory pricesE18, bool[] memory halted, uint64 observedAt) =
@@ -153,12 +161,18 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
         emit WorkflowOwnerSet(workflowOwner_);
     }
 
+    function setAnyWorkflow(bool anyWorkflow_) external onlyOwner {
+        anyWorkflow = anyWorkflow_;
+        emit AnyWorkflowSet(anyWorkflow_);
+    }
+
     function setLimits(uint32 reportMaxAge_, uint16 maxDeviationBps_) external onlyOwner {
         _setLimits(reportMaxAge_, maxDeviationBps_);
     }
 
     function guardianSet(address token, bool halted) external onlyOwner {
-        status[token].halted = halted;
+        guardianHalted[token] = halted;
+        if (!halted) status[token].halted = false;
         emit GuardianOverride(token, halted);
     }
 

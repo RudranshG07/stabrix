@@ -16,7 +16,7 @@ trap 'kill $ANVIL_PID 2>/dev/null' EXIT
 
 for _ in $(seq 1 60); do cast chain-id --rpc-url "$RPC" >/dev/null 2>&1 && break; sleep 1; done
 
-(cd contracts && PRIVATE_KEY="$DEPLOYER_KEY" CRE_FORWARDER="$CRE_SIM_FORWARDER" forge script script/Deploy.s.sol --tc Deploy --rpc-url "$RPC" --broadcast --silent)
+(cd contracts && PRIVATE_KEY="$DEPLOYER_KEY" CRE_FORWARDER="$CRE_SIM_FORWARDER" CRE_ANY_WORKFLOW=true forge script script/Deploy.s.sol --tc Deploy --rpc-url "$RPC" --broadcast --silent)
 npm run --silent seed -w @stabrix/ops
 npm run --silent cre-config -w @stabrix/ops
 

@@ -143,6 +143,52 @@ contract StabrixRouterTest is StabrixFixture {
         assertEq(price, 1e18);
     }
 
+    function test_ReportsRefusedUntilWorkflowOwnerSet() public {
+        StabrixOracle fresh = new StabrixOracle(forwarder, address(this), 900, 50);
+        address[] memory t = new address[](1);
+        uint256[] memory p = new uint256[](1);
+        bool[] memory hlt = new bool[](1);
+        t[0] = tokens[0];
+        hlt[0] = true;
+        bytes memory report = abi.encode(t, p, hlt, uint64(block.timestamp));
+        vm.prank(forwarder);
+        vm.expectRevert(StabrixOracle.WorkflowOwnerNotSet.selector);
+        fresh.onReport("", report);
+        assertFalse(fresh.isHalted(tokens[0]));
+    }
+
+    function test_GuardianHaltSurvivesCalmReport() public {
+        (ISwapVM.Order memory order,) = ship(lp, config(1, 10_000, true), 100, 1);
+        oracle.guardianSet(tokens[3], true);
+        address[] memory t = new address[](1);
+        uint256[] memory p = new uint256[](1);
+        bool[] memory hlt = new bool[](1);
+        t[0] = tokens[3];
+        p[0] = 1e18;
+        vm.prank(forwarder);
+        oracle.onReport("", abi.encode(t, p, hlt, uint64(block.timestamp)));
+        assertTrue(oracle.isHalted(tokens[3]), "calm CRE report does not lift a guardian halt");
+
+        fund(trader, 3, unit(3), address(router));
+        vm.prank(trader);
+        vm.expectRevert(abi.encodeWithSelector(StabrixOracle.Halted.selector, tokens[3]));
+        router.swap(order, tokens[3], tokens[0], unit(3), takerData(true, trader));
+    }
+
+    function test_GuardianResumeClearsCreHalt() public {
+        address[] memory t = new address[](1);
+        uint256[] memory p = new uint256[](1);
+        bool[] memory hlt = new bool[](1);
+        t[0] = tokens[2];
+        p[0] = 0.9e18;
+        hlt[0] = true;
+        vm.prank(forwarder);
+        oracle.onReport("", abi.encode(t, p, hlt, uint64(block.timestamp)));
+        assertTrue(oracle.isHalted(tokens[2]));
+        oracle.guardianSet(tokens[2], false);
+        assertFalse(oracle.isHalted(tokens[2]));
+    }
+
     function test_SupportsReceiverInterface() public view {
         assertTrue(oracle.supportsInterface(0x805f2132));
         assertTrue(oracle.supportsInterface(0x01ffc9a7));
