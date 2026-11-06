@@ -4,6 +4,7 @@ import type { Quote, TokenInfo } from '@stabrix/sdk'
 import { ArrowDownUp } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { TxStatus } from '@/components/tx-status'
+import { TestCoinsNotice } from '@/components/test-coins'
 import { Button, CoinDot, KindTag, Label, Panel, Pill, SectionHead, Skeleton, StatusTag, TokenSelect, VenueTag } from '@/components/ui'
 import { CURRENCY } from '@/lib/coins'
 import { formatAmount, formatPct, formatRate, formatUsd, shortAddress, toUnits } from '@/lib/format'
@@ -16,14 +17,14 @@ const SLIPPAGES = [10, 30, 100]
 function Row({ term, children, tone }: { term: string; children: React.ReactNode; tone?: 'up' | 'down' }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-2.5">
-      <dt className="text-[10.5px] font-bold tracking-[0.14em] text-muted uppercase">{term}</dt>
-      <dd className={`num text-right text-[17px] ${tone === 'down' ? 'text-down' : tone === 'up' ? 'text-up' : ''}`}>{children}</dd>
+      <dt className="text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase">{term}</dt>
+      <dd className={`num text-right text-[14px] ${tone === 'down' ? 'text-down' : tone === 'up' ? 'text-up' : ''}`}>{children}</dd>
     </div>
   )
 }
 
 function Field({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-[20px] border-2 border-surface-line bg-paper px-5 py-4">{children}</div>
+  return <div className="rounded-xl border border-line bg-paper px-5 py-4">{children}</div>
 }
 
 export default function SwapPage() {
@@ -100,21 +101,21 @@ export default function SwapPage() {
   return (
     <div className="space-y-12">
       <SectionHead
-        index="Stabrix · 01"
         title="Swap"
         aside={
-          <p className="font-serif max-w-sm text-[17px] leading-snug text-muted sm:text-right">
+          <p className="max-w-2xl text-[14px] leading-snug text-muted">
             Any pair across eight stablecoins. One quote splits across LP strategies on the 1inch router and the Stabrix router, settled in one transaction.
           </p>
         }
       />
+      <TestCoinsNotice />
 
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-12">
         <Panel className="p-5 sm:p-7 lg:col-span-7 lg:self-start">
           {inHalted && (
-            <div className="mb-5 rounded-[20px] border-2 border-down bg-down/10 px-5 py-4" role="status">
-              <p className="text-[11px] font-bold tracking-[0.14em] text-down uppercase">{tIn.symbol} is halted by Chainlink CRE</p>
-              <p className="font-serif mt-1.5 text-[16px] leading-snug">
+            <div className="mb-5 rounded-xl border border-down bg-down/10 px-5 py-4" role="status">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-down uppercase">{tIn.symbol} is halted by Chainlink CRE</p>
+              <p className="mt-1.5 text-[14px] leading-snug">
                 Ranges refuse it. Backstops buy it at its market price{pIn?.depegE18 ? ` (${formatRate(pIn.depegE18)})` : ''} minus a
                 discount, and pay you in a healthy coin.
               </p>
@@ -123,16 +124,16 @@ export default function SwapPage() {
 
           <Field>
             <div className="flex items-center justify-between gap-3">
-              <label htmlFor="amount-in" className="text-[10.5px] font-bold tracking-[0.14em] uppercase">
+              <label htmlFor="amount-in" className="text-[10.5px] font-medium tracking-[0.08em] uppercase">
                 You pay
               </label>
               <button
                 type="button"
-                className="text-[10.5px] font-bold tracking-[0.12em] text-muted uppercase transition-colors hover:text-ink"
+                className="text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase transition-colors hover:text-ink"
                 disabled={balanceIn === undefined}
                 onClick={() => balanceIn !== undefined && setText(formatAmount(balanceIn, tIn.decimals, 6).replace(/,/g, ''))}
               >
-                Balance <span className="num text-[13px] tracking-normal">{balanceIn === undefined ? '—' : formatAmount(balanceIn, tIn.decimals)}</span>
+                Balance <span className="num text-[12.5px] tracking-normal">{balanceIn === undefined ? '—' : formatAmount(balanceIn, tIn.decimals)}</span>
               </button>
             </div>
             <div className="mt-2 flex items-center gap-3">
@@ -150,7 +151,7 @@ export default function SwapPage() {
               />
               <TokenSelect id="token-in" label="Coin to pay" tokens={tokens} value={tokenIn} onChange={setTokenIn} />
             </div>
-            <p className="num text-[15px] text-muted">{usdIn === null ? ' ' : formatUsd(usdIn)}</p>
+            <p className="num text-[13.5px] text-muted">{usdIn === null ? ' ' : formatUsd(usdIn)}</p>
           </Field>
 
           <div className="relative z-10 -my-3 flex justify-center">
@@ -158,24 +159,24 @@ export default function SwapPage() {
               type="button"
               onClick={flip}
               aria-label="Swap direction"
-              className="grid size-11 place-items-center rounded-full border-[3px] border-surface-line bg-surface transition-transform hover:rotate-180"
+              className="grid size-11 place-items-center rounded-full border border-line bg-surface transition-transform hover:rotate-180"
             >
               <ArrowDownUp className="size-4" aria-hidden />
             </button>
           </div>
 
           <Field>
-            <p className="text-[10.5px] font-bold tracking-[0.14em] uppercase">You receive</p>
+            <p className="text-[10.5px] font-medium tracking-[0.08em] uppercase">You receive</p>
             <div className="mt-2 flex items-center gap-3">
               <output aria-live="polite" style={{ ['--len' as string]: amountLen }} className="num amount min-w-0 flex-1 truncate">
                 {market.isLoading ? <Skeleton className="h-12 w-40" /> : received}
               </output>
               <TokenSelect id="token-out" label="Coin to receive" tokens={tokens} value={tokenOut} onChange={setTokenOut} />
             </div>
-            <p className="num text-[15px] text-muted">{usdOut === null ? ' ' : formatUsd(usdOut)}</p>
+            <p className="num text-[13.5px] text-muted">{usdOut === null ? ' ' : formatUsd(usdOut)}</p>
           </Field>
 
-          <dl className="mt-5 divide-y-2 divide-dashed divide-line">
+          <dl className="mt-5 divide-y divide-line">
             <Row term="Rate">{rate ? `1 ${tIn.symbol} = ${formatRatio(rate)} ${tOut.symbol}` : '—'}</Row>
             <Row term="Value vs Chainlink" tone={value !== null && value < -1 ? 'down' : undefined}>
               {value === null ? '—' : formatPct(value, 3)}
@@ -184,7 +185,7 @@ export default function SwapPage() {
           </dl>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <span className="text-[10.5px] font-bold tracking-[0.14em] text-muted uppercase">Slippage limit</span>
+            <span className="text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase">Slippage limit</span>
             <div className="flex gap-1.5" role="radiogroup" aria-label="Slippage limit">
               {SLIPPAGES.map((s) => (
                 <Pill key={s} active={slippage === s} onClick={() => setSlippage(s)}>
@@ -205,7 +206,7 @@ export default function SwapPage() {
             <div className="flex items-center justify-between gap-3">
               <Label>Route</Label>
               {quote && quote.legs.length > 0 && (
-                <span className="text-[10.5px] font-bold tracking-[0.12em] text-muted uppercase">
+                <span className="text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase">
                   {quote.legs.length} leg{quote.legs.length > 1 ? 's' : ''} · one transaction
                 </span>
               )}
@@ -216,9 +217,9 @@ export default function SwapPage() {
                 <Skeleton className="h-20" />
               </div>
             ) : !market.data || (market.data.ranges.length === 0 && market.data.backstops.length === 0) ? (
-              <p className="font-serif mt-4 text-[16px] text-muted">No live strategies yet. Add liquidity to open the pool.</p>
+              <p className="mt-4 text-[14px] text-muted">No live strategies yet. Add liquidity to open the pool.</p>
             ) : !quote || quote.legs.length === 0 ? (
-              <p className="font-serif mt-4 text-[16px] text-muted">
+              <p className="mt-4 text-[14px] text-muted">
                 {outHalted
                   ? `Nobody pays out ${tOut.symbol} while it is halted. Pick a healthy coin to receive.`
                   : inHalted
@@ -231,22 +232,22 @@ export default function SwapPage() {
                   const s = quote.strategies.find((x) => x.id === leg.id)
                   const share = Number((leg.amountIn * 10_000n) / quote.amountIn) / 100
                   return (
-                    <li key={leg.id} className="rounded-[18px] border-2 border-surface-line bg-paper p-4">
+                    <li key={leg.id} className="rounded-xl border border-line bg-paper p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-[12px] font-bold tracking-[0.04em]">{s ? shortAddress(s.maker) : '—'}</span>
+                        <span className="text-[12px] font-medium tracking-[0.04em]">{s ? shortAddress(s.maker) : '—'}</span>
                         <span className="flex gap-1.5">
                           {s && <KindTag kind={s.kind} />}
                           {s && <VenueTag kind={s.venue.kind} />}
                         </span>
                       </div>
                       <div className="mt-3 flex items-baseline justify-between">
-                        <span className="num text-[17px]">
+                        <span className="num text-[14px]">
                           {formatAmount(leg.amountIn, tIn.decimals)} {tIn.symbol}
                           <span className="text-muted"> → {formatAmount(leg.amountOut, tOut.decimals)} {tOut.symbol}</span>
                         </span>
-                        <span className="num text-[15px] text-muted">{share.toFixed(1)}%</span>
+                        <span className="num text-[13.5px] text-muted">{share.toFixed(1)}%</span>
                       </div>
-                      <div className="mt-2.5 h-2 overflow-hidden rounded-full border-2 border-surface-line bg-surface">
+                      <div className="mt-2.5 h-2 overflow-hidden rounded-full border border-line bg-surface">
                         <div className="h-full bg-ink transition-[width] duration-300" style={{ width: `${share}%` }} />
                       </div>
                     </li>
@@ -259,9 +260,9 @@ export default function SwapPage() {
           <Panel className="p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <Label>Chainlink prices</Label>
-              <span className="text-[10.5px] font-bold tracking-[0.12em] text-muted uppercase">guarded by CRE</span>
+              <span className="text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase">guarded by CRE</span>
             </div>
-            <ul className="mt-3 divide-y-2 divide-dashed divide-line">
+            <ul className="mt-3 divide-y divide-line">
               {tokens.map((t) => {
                 const p = priceOf(market.data, t)
                 const selected = t.address === tokenOut
@@ -276,9 +277,9 @@ export default function SwapPage() {
                       }`}
                     >
                       <CoinDot symbol={t.symbol} />
-                      <span className="w-14 text-[12px] font-bold tracking-[0.06em]">{t.symbol}</span>
-                      <span className="text-[10.5px] font-bold tracking-[0.12em] text-muted uppercase">{CURRENCY[t.symbol]}</span>
-                      <span className="num ml-auto text-[16px]">
+                      <span className="w-14 text-[12px] font-medium tracking-[0.06em]">{t.symbol}</span>
+                      <span className="text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase">{CURRENCY[t.symbol]}</span>
+                      <span className="num ml-auto text-[14px]">
                         {market.isLoading ? '…' : formatRate(p?.halted ? p.depegE18 : p?.priceE18, p?.fx ? 5 : 4)}
                       </span>
                       <StatusTag halted={p?.halted ?? false} />

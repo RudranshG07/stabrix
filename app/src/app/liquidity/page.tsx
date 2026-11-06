@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { StrategyStatus, settingOf } from '@/components/strategies'
 import { TxStatus } from '@/components/tx-status'
-import { Button, COIN_TONES, CoinDot, KindTag, Label, Panel, SectionHead, Skeleton, VenueTag } from '@/components/ui'
+import { TestCoinsNotice } from '@/components/test-coins'
+import { Button, CoinDot, KindTag, Label, Panel, SectionHead, Skeleton, VenueTag } from '@/components/ui'
 import { CURRENCY } from '@/lib/coins'
 import { formatAmount, formatUsd, toUnits } from '@/lib/format'
 import { priceOf } from '@/lib/market'
@@ -26,17 +27,12 @@ import { useTx } from '@/lib/tx'
 type Mode = 'range' | 'backstop'
 type VenueId = 'native' | 'official'
 
-const PRESET_TONES: Record<PresetId, string> = {
-  tight: 'bg-tone-signal',
-  balanced: 'bg-tone-scan',
-  wide: 'bg-tone-sand',
-}
 
 const SAMPLE_DEPEG = 0.93
-const small = 'text-[10.5px] font-bold tracking-[0.14em] uppercase'
+const small = 'text-[10.5px] font-medium tracking-[0.08em] uppercase'
 
 function Field({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`rounded-[20px] border-2 border-surface-line bg-paper ${className}`}>{children}</div>
+  return <div className={`rounded-xl border border-line bg-paper ${className}`}>{children}</div>
 }
 
 function Segmented<T extends string>({
@@ -51,7 +47,7 @@ function Segmented<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid grid-cols-2 gap-1.5 rounded-full border-[3px] border-surface-line bg-paper p-1">
+    <div role="radiogroup" aria-label={label} className="grid grid-cols-2 gap-1.5 rounded-full border border-line bg-paper p-1">
       {options.map(([id, text]) => (
         <button
           key={id}
@@ -59,8 +55,8 @@ function Segmented<T extends string>({
           role="radio"
           aria-checked={value === id}
           onClick={() => onChange(id)}
-          className={`font-pill min-h-11 rounded-full px-4 pt-[3px] text-[14px] tracking-[0.02em] uppercase transition-colors ${
-            value === id ? 'bg-ink text-on-accent' : 'hover:bg-surface-hover'
+          className={`min-h-9 rounded-full px-4 text-[13px] font-medium transition-colors ${
+            value === id ? 'bg-ink text-on-accent' : 'text-muted hover:text-ink'
           }`}
         >
           {text}
@@ -88,16 +84,16 @@ function CoinToggle({
       type="button"
       aria-pressed={selected}
       onClick={onToggle}
-      className={`flex min-h-16 w-full flex-col justify-center rounded-[18px] border-2 px-3.5 py-2.5 text-left transition-colors ${
-        selected ? 'border-surface-line bg-surface shadow-[0_3px_0_0_var(--color-surface-line)]' : 'border-line bg-paper opacity-70 hover:opacity-100'
+      className={`flex min-h-16 w-full flex-col justify-center rounded-xl border px-3.5 py-2.5 text-left transition-colors ${
+        selected ? 'border-ink bg-surface' : 'border-line bg-paper opacity-60 hover:opacity-100'
       }`}
     >
       <span className="flex items-center gap-2">
         <CoinDot symbol={token.symbol} />
-        <span className="text-[12px] font-bold tracking-[0.06em]">{token.symbol}</span>
-        <span className="ml-auto text-[10px] font-bold tracking-[0.12em] text-muted">{CURRENCY[token.symbol]}</span>
+        <span className="text-[12px] font-medium tracking-[0.06em]">{token.symbol}</span>
+        <span className="ml-auto text-[10px] font-medium tracking-[0.08em] text-muted">{CURRENCY[token.symbol]}</span>
       </span>
-      <span className="num mt-1 truncate text-[15px] text-muted">{balance === undefined ? '—' : usd > 0 ? formatUsd(usd, 0) : 'none held'}</span>
+      <span className="num mt-1 truncate text-[13.5px] text-muted">{balance === undefined ? '—' : usd > 0 ? formatUsd(usd, 0) : 'none held'}</span>
     </button>
   )
 }
@@ -117,12 +113,12 @@ function VenuePicker({ value, onChange }: { value: VenueId; onChange: (v: VenueI
           role="radio"
           aria-checked={value === id}
           onClick={() => onChange(id)}
-          className={`rounded-[18px] border-2 px-4 py-3 text-left transition-colors ${
-            value === id ? 'border-surface-line bg-ink text-on-accent' : 'border-surface-line bg-paper hover:bg-surface-hover'
+          className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+            value === id ? 'border-ink bg-ink text-on-accent' : 'border-line bg-paper hover:bg-surface-hover'
           }`}
         >
-          <span className="block text-[13px] font-bold tracking-[0.04em]">{title}</span>
-          <span className={`mt-0.5 block text-[12.5px] ${value === id ? 'text-on-accent/70' : 'text-muted'}`}>{sub}</span>
+          <span className="block text-[12.5px] font-medium tracking-[0.04em]">{title}</span>
+          <span className={`mt-0.5 block text-[12px] ${value === id ? 'text-on-accent/70' : 'text-muted'}`}>{sub}</span>
         </button>
       ))}
     </div>
@@ -135,7 +131,7 @@ function UsdInput({ id, label, value, onChange }: { id: string; label: string; v
       <label htmlFor={id} className={`${small} shrink-0`}>
         {label}
       </label>
-      <span className="num ml-auto text-[28px] text-muted">$</span>
+      <span className="num ml-auto text-[18px] text-muted">$</span>
       <input
         id={id}
         inputMode="decimal"
@@ -143,7 +139,7 @@ function UsdInput({ id, label, value, onChange }: { id: string; label: string; v
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={value !== '' && toUnits(value, 18) === null}
-        className="num w-36 min-w-0 bg-transparent text-right text-[28px] outline-none sm:w-44"
+        className="num w-36 min-w-0 bg-transparent text-right text-[18px] outline-none sm:w-44"
       />
     </Field>
   )
@@ -152,15 +148,15 @@ function UsdInput({ id, label, value, onChange }: { id: string; label: string; v
 function NeedList({ rows }: { rows: { token: TokenInfo; need: bigint; have: bigint | undefined }[] }) {
   if (rows.length === 0) return null
   return (
-    <ul className="mt-3 divide-y-2 divide-dashed divide-line">
+    <ul className="mt-3 divide-y divide-line">
       {rows.map(({ token, need, have }) => {
         const short = have !== undefined && need > have
         return (
           <li key={token.address} className="flex items-center gap-3 py-2">
             <CoinDot symbol={token.symbol} />
-            <span className="w-14 text-[12px] font-bold tracking-[0.06em]">{token.symbol}</span>
-            <span className={`num ml-auto text-[16px] ${short ? 'text-down' : ''}`}>{formatAmount(need, token.decimals, 2)}</span>
-            <span className="num w-32 text-right text-[14px] text-muted">of {have === undefined ? '—' : formatAmount(have, token.decimals, 0)}</span>
+            <span className="w-14 text-[12px] font-medium tracking-[0.06em]">{token.symbol}</span>
+            <span className={`num ml-auto text-[14px] ${short ? 'text-down' : ''}`}>{formatAmount(need, token.decimals, 2)}</span>
+            <span className="num w-32 text-right text-[13px] text-muted">of {have === undefined ? '—' : formatAmount(have, token.decimals, 0)}</span>
           </li>
         )
       })}
@@ -254,14 +250,14 @@ function RangeForm({ held, balances, market }: { held: TokenInfo[]; balances: bi
                 role="radio"
                 aria-checked={active}
                 onClick={() => setPreset(p.id)}
-                className={`rounded-[20px] border-2 border-surface-line p-4 text-left text-tone-ink transition-[transform,box-shadow] ${PRESET_TONES[p.id]} ${
-                  active ? 'shadow-[0_4px_0_0_var(--color-surface-line)]' : 'opacity-70 hover:opacity-100'
+                className={`rounded-xl border p-4 text-left transition-colors ${
+                  active ? 'border-ink bg-surface' : 'border-line bg-paper text-muted hover:bg-surface-hover'
                 }`}
               >
                 <span className={small}>{p.label}</span>
-                <span className="num mt-2 block text-[34px] leading-none">{p.concentration + 1}x</span>
+                <span className="num mt-2 block text-[20px] leading-none">{p.concentration + 1}x</span>
                 <span className="mt-1 block text-[12px]">capital efficiency</span>
-                <span className="mt-3 block border-t-2 border-dashed border-tone-ink/25 pt-2.5 text-[11.5px] leading-relaxed">
+                <span className="mt-3 block border-t border-line pt-2.5 text-[11.5px] leading-relaxed">
                   Edge at a {(p.maxDeviationBps / 100).toFixed(1)}% depeg
                   <br />
                   Fee {(p.feeBps / 100).toFixed(2)}% · FX {(p.fxFeeBps / 100).toFixed(2)}%
@@ -287,7 +283,7 @@ function RangeForm({ held, balances, market }: { held: TokenInfo[]; balances: bi
       <div>
         <div className="flex items-baseline justify-between gap-3">
           <span className={`${small} text-muted`}>Allowance granted</span>
-          <span className="num text-[20px]">{formatUsd(total, 0)}</span>
+          <span className="num text-[15px]">{formatUsd(total, 0)}</span>
         </div>
         <Button className="mt-4 w-full" disabled={blocked} busy={tx.state.status === 'pending'} onClick={open}>
           {cta}
@@ -386,15 +382,15 @@ function BackstopForm({ held, balances, market }: { held: TokenInfo[]; balances:
                 role="radio"
                 aria-checked={active}
                 onClick={() => setPreset(x.id)}
-                className={`rounded-[20px] border-2 border-surface-line p-4 text-left transition-[transform,box-shadow] ${
-                  active ? 'bg-[#f6c945] text-tone-ink shadow-[0_4px_0_0_var(--color-surface-line)]' : 'bg-paper opacity-70 hover:opacity-100'
+                className={`rounded-xl border p-4 text-left transition-colors ${
+                  active ? 'border-ink bg-surface' : 'border-line bg-paper text-muted hover:bg-surface-hover'
                 }`}
               >
                 <span className={small}>{x.label}</span>
-                <span className="num mt-2 block text-[26px] leading-none">
+                <span className="num mt-2 block text-[18px] leading-none">
                   {x.startBps / 100}% → {x.endBps / 100}%
                 </span>
-                <span className="mt-3 block border-t-2 border-dashed border-tone-ink/25 pt-2.5 text-[11.5px] leading-relaxed">
+                <span className="mt-3 block border-t border-line pt-2.5 text-[11.5px] leading-relaxed">
                   At a ${SAMPLE_DEPEG.toFixed(2)} depeg it pays
                   <br />${(SAMPLE_DEPEG * (1 - x.startBps / 10_000)).toFixed(3)} falling to ${(SAMPLE_DEPEG * (1 - x.endBps / 10_000)).toFixed(3)}
                 </span>
@@ -421,7 +417,7 @@ function BackstopForm({ held, balances, market }: { held: TokenInfo[]; balances:
       <div>
         <div className="flex items-baseline justify-between gap-3">
           <span className={`${small} text-muted`}>Pledged, still in your wallet</span>
-          <span className="num text-[20px]">{formatUsd(Number(totalPledge) / 1e18, 0)}</span>
+          <span className="num text-[15px]">{formatUsd(Number(totalPledge) / 1e18, 0)}</span>
         </div>
         <Button className="mt-4 w-full" disabled={blocked} busy={tx.state.status === 'pending'} onClick={pledge}>
           {cta}
@@ -448,9 +444,9 @@ function WalletPanel({ market, balances, mine }: { market: Market | undefined; b
         <Skeleton className="mt-4 h-40" />
       ) : (
         <>
-          <p className="num mt-4 text-[40px] leading-none">{formatUsd(walletUsd, 0)}</p>
+          <p className="num mt-4 text-[24px] leading-none">{formatUsd(walletUsd, 0)}</p>
           <p className="caption mt-1.5">held across {deployment.tokens.length} stablecoins</p>
-          <dl className="mt-5 divide-y-2 divide-dashed divide-line">
+          <dl className="mt-5 divide-y divide-line">
             {(
               [
                 ['Backing FX ranges', formatUsd(inRanges, 0)],
@@ -460,7 +456,7 @@ function WalletPanel({ market, balances, mine }: { market: Market | undefined; b
             ).map(([term, value]) => (
               <div key={term} className="flex items-baseline justify-between gap-4 py-2.5">
                 <dt className={`${small} text-muted`}>{term}</dt>
-                <dd className="num text-[18px]">{value}</dd>
+                <dd className="num text-[14px]">{value}</dd>
               </div>
             ))}
           </dl>
@@ -487,7 +483,7 @@ function StrategyCard({ s, market, onClose, busy }: { s: LiveStrategy; market: M
           <p className={small}>
             {settingOf(s)} {s.kind === 'range' ? 'FX range' : 'backstop'}
           </p>
-          <p className="num mt-2 text-[34px] leading-none">{formatUsd(usd, 0)}</p>
+          <p className="num mt-2 text-[20px] leading-none">{formatUsd(usd, 0)}</p>
         </div>
         <span className="flex flex-wrap gap-1.5">
           <KindTag kind={s.kind} />
@@ -499,9 +495,9 @@ function StrategyCard({ s, market, onClose, busy }: { s: LiveStrategy; market: M
         {shown.map(({ t, k }) => {
           const token = client.token(t)
           return (
-            <li key={t} className={`rounded-xl border-2 border-surface-line px-2.5 py-1.5 text-tone-ink ${COIN_TONES[token.symbol] ?? 'bg-surface-hover'}`}>
-              <span className="block text-[10px] font-bold tracking-[0.08em]">{token.symbol}</span>
-              <span className="num block truncate text-[14px]">{formatAmount(s.balances[k] ?? 0n, token.decimals, 0)}</span>
+            <li key={t} className="rounded-xl border border-line bg-surface px-2.5 py-1.5">
+              <span className="block text-[10px] font-medium tracking-[0.08em]">{token.symbol}</span>
+              <span className="num block truncate text-[13px]">{formatAmount(s.balances[k] ?? 0n, token.decimals, 0)}</span>
             </li>
           )
         })}
@@ -514,7 +510,7 @@ function StrategyCard({ s, market, onClose, busy }: { s: LiveStrategy; market: M
         </p>
       )}
       {short.length > 0 && (
-        <p className="mt-3 text-[13px] font-semibold text-down" role="status">
+        <p className="mt-3 text-[12.5px] font-medium text-down" role="status">
           Wallet holds less {short.map((k) => client.token(s.config.tokens[k]!).symbol).join(', ')} than this strategy offers. Fills route around the gap.
         </p>
       )}
@@ -554,14 +550,14 @@ export default function LiquidityPage() {
   return (
     <div className="space-y-12">
       <SectionHead
-        index="Stabrix · 02"
         title="Liquidity"
         aside={
-          <p className="font-serif max-w-sm text-[17px] leading-snug text-muted sm:text-right">
+          <p className="max-w-2xl text-[14px] leading-snug text-muted">
             One wallet balance, two jobs. An FX range earns fees on every trade. A backstop stands behind every coin when one breaks.
           </p>
         }
       />
+      <TestCoinsNotice />
 
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-12">
         <Panel className="p-5 sm:p-7 lg:col-span-7 lg:self-start">
@@ -585,13 +581,10 @@ export default function LiquidityPage() {
 
         <div className="space-y-7 lg:col-span-5">
           <WalletPanel market={market.data} balances={balances.data} mine={mine} />
-          <Link href="/pool" className="ink-card flex items-center justify-between gap-4 p-5 transition-transform hover:translate-y-[2px] sm:p-6">
+          <Link href="/pool" className="ink-card flex items-center justify-between gap-4 p-5 transition-colors hover:bg-surface-hover sm:p-6">
             <span>
-              <span className="label">
-                <span className="size-2 shrink-0 rotate-45 border-2 border-current" aria-hidden />
-                The pool
-              </span>
-              <span className="font-serif mt-2 block text-[17px] text-muted">Every strategy, the reserve mix and the orbit map.</span>
+              <span className="label">The pool</span>
+              <span className="mt-2 block text-[14px] text-muted">Every strategy, the reserve mix and the orbit map.</span>
             </span>
             <ArrowRight className="size-5 shrink-0" aria-hidden />
           </Link>
@@ -604,7 +597,7 @@ export default function LiquidityPage() {
           <Skeleton className="h-44" />
         ) : !market.data || mine.length === 0 ? (
           <Panel className="p-6">
-            <p className="font-serif text-[17px] text-muted">
+            <p className="text-[14px] text-muted">
               {signer ? 'Nothing open for this account yet. Open an FX range or pledge a backstop above.' : 'Connect an account to see its strategies.'}
             </p>
           </Panel>
