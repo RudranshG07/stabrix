@@ -106,6 +106,11 @@ func onTick(config *Config, runtime cre.Runtime, _ *cron.Payload) (*Result, erro
 		for a := range apis {
 			obs.Api = append(obs.Api, apis[a].Get(k))
 		}
+		for _, path := range t.ApiPaths {
+			if path != "" {
+				obs.ApiExpected++
+			}
+		}
 
 		d := Decide(config, obs, now)
 		logger.Info("observed", "token", t.Symbol, "ref", obs.Ref, "feed", obs.Feed, "api", obs.Api,

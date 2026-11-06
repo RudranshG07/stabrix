@@ -305,3 +305,28 @@ func TestValidate(t *testing.T) {
 		t.Fatal("resume band must sit inside soft band")
 	}
 }
+
+func TestDecideOffchainHaltNeedsEveryApi(t *testing.T) {
+	cases := []struct {
+		name string
+		obs  Observation
+		halt bool
+	}{
+		{"one api down, the other alarming", Observation{Pegged: true, Feed: e18(0.9999), Api: []*big.Int{e18(0.93)}, ApiExpected: 2}, false},
+		{"one api missing the coin, the other alarming", Observation{Pegged: true, Feed: e18(0.9999), Api: []*big.Int{e18(0.93), nil}, ApiExpected: 2}, false},
+		{"both apis alarming", Observation{Pegged: true, Feed: e18(0.9999), Api: a(0.93, 0.95), ApiExpected: 2}, true},
+		{"apis disagree, least alarming wins", Observation{Pegged: true, Feed: e18(0.9999), Api: a(0.93, 0.999), ApiExpected: 2}, false},
+		{"chainlink halts alone with an api down", Observation{Pegged: true, Feed: e18(0.96), Api: []*big.Int{e18(0.999)}, ApiExpected: 2}, true},
+		{"soft path needs every api", Observation{Pegged: true, Feed: e18(0.992), Api: []*big.Int{e18(0.991)}, ApiExpected: 2}, false},
+		{"soft path with every api", Observation{Pegged: true, Feed: e18(0.992), Api: a(0.991, 0.99), ApiExpected: 2}, true},
+		{"halted coin resumes on the apis that answer", Observation{Pegged: true, Feed: e18(0.9995), Api: []*big.Int{e18(0.9992)}, ApiExpected: 2, Halted: true}, false},
+		{"halted coin holds while an answering api is still off", Observation{Pegged: true, Feed: e18(0.9995), Api: []*big.Int{e18(0.95)}, ApiExpected: 2, Halted: true}, true},
+		{"fx coin needs both apis too", Observation{Ref: e18(1.12), Feed: e18(1.119), Api: []*big.Int{e18(1.04)}, ApiExpected: 2}, false},
+	}
+	for _, c := range cases {
+		d := Decide(cfg, c.obs, 0)
+		if !d.Known || d.Halt != c.halt {
+			t.Errorf("%s: known=%v halt=%v want %v (%s)", c.name, d.Known, d.Halt, c.halt, d.Reason)
+		}
+	}
+}

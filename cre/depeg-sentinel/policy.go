@@ -79,6 +79,7 @@ type Observation struct {
 	Ref          *big.Int
 	Feed         *big.Int
 	Api          []*big.Int
+	ApiExpected  int
 	Halted       bool
 	OnchainPrice *big.Int
 	OnchainAt    int64
@@ -110,9 +111,10 @@ func deviationBps(price, ref *big.Int) int64 {
 
 func positive(v *big.Int) bool { return v != nil && v.Sign() > 0 }
 
-// Decide halts on the least alarming offchain quote, so one stale API cannot halt a healthy coin. A healthy coin is
-// reported at the quote closest to its reference, so one lagging API cannot misprice ranges, and a halted coin at
-// the lowest market price, which is the safe side for backstop makers. A halted coin with no market
+// Decide halts on offchain data only when every API configured for the coin answered and even the least alarming
+// quote is past the limit, so one stale or missing API cannot halt a healthy coin; the Chainlink feed can halt alone.
+// A healthy coin is reported at the quote closest to its reference, so one lagging API cannot misprice ranges, and a
+// halted coin at the lowest market price, which is the safe side for backstop makers. A halted coin with no market
 // data is not reported, so its onchain price ages out instead of being refreshed with the reference rate.
 func Decide(cfg *Config, o Observation, now int64) Decision {
 	ref := o.Ref
@@ -129,6 +131,7 @@ func Decide(cfg *Config, o Observation, now int64) Decision {
 		}
 	}
 	feedOk, apiOk := positive(o.Feed), len(quotes) > 0
+	apiAll := apiOk && len(quotes) >= o.ApiExpected
 	if !feedOk && !apiOk && o.Halted {
 		return Decision{Halt: true, Reason: "no market data while halted"}
 	}
@@ -148,11 +151,11 @@ func Decide(cfg *Config, o Observation, now int64) Decision {
 
 	d := Decision{Known: true}
 	switch {
-	case apiOk && apiDev >= cfg.HardBps:
+	case apiAll && apiDev >= cfg.HardBps:
 		d.Halt, d.Reason = true, fmt.Sprintf("offchain %dbps >= hard %dbps", apiDev, cfg.HardBps)
 	case feedOk && feedDev >= cfg.HardBps:
 		d.Halt, d.Reason = true, fmt.Sprintf("chainlink %dbps >= hard %dbps", feedDev, cfg.HardBps)
-	case apiOk && feedOk && apiDev >= cfg.SoftBps && feedDev >= cfg.SoftBps:
+	case apiAll && feedOk && apiDev >= cfg.SoftBps && feedDev >= cfg.SoftBps:
 		d.Halt, d.Reason = true, fmt.Sprintf("both sources >= soft %dbps", cfg.SoftBps)
 	case o.Halted:
 		calm := (!apiOk || apiDev <= cfg.ResumeBps) && (!feedOk || feedDev <= cfg.ResumeBps)
