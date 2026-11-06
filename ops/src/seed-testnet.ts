@@ -1,4 +1,4 @@
-import { type PresetId, StabrixClient, type Venue, WAD, buildOrder, mockStablecoinAbi } from '@stabrix/sdk'
+import { type PresetId, StabrixClient, type Venue, WAD, buildBackstopOrder, buildOrder, mockStablecoinAbi } from '@stabrix/sdk'
 import { type Hex, createWalletClient, formatUnits, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { RPC_URL, connect, loadDeployment } from './env.js'
@@ -9,6 +9,7 @@ const RANGES: { preset: PresetId; perCoin: bigint; venue: 'native' | 'official' 
   { preset: 'wide', perCoin: 80_000n, venue: 'official' },
 ]
 const TRADING_FLOAT = 50_000n
+const BACKSTOP = { startBps: 200, endBps: 1000, capUsd: 20_000n, pledgeUsd: 30_000n, salt: 101n }
 
 async function main() {
   const key = process.env.PRIVATE_KEY as Hex | undefined
@@ -45,6 +46,20 @@ async function main() {
     }
     const shipped = await client.ship(wallet, config, r.perCoin * WAD, venue, BigInt(k + 1))
     console.log(`${r.preset.padEnd(8)} ${r.venue.padEnd(8)} ${shipped.strategyHash} tx ${shipped.hash}`)
+  }
+
+  const bs = client.buildBackstop(BACKSTOP.startBps, BACKSTOP.endBps, BACKSTOP.capUsd * WAD)
+  const bsOrder = buildBackstopOrder(me, bs, { kind: 'native' }, BACKSTOP.salt)
+  if (await client.isShipped(me, bsOrder, deployment.router, bs.tokens[0]!)) {
+    console.log('backstop already live, skipping')
+  } else {
+    const pledges = bs.tokens.map((t, k) => {
+      const sym = client.token(t).symbol
+      const price = prices.get(t.toLowerCase())?.priceE18 ?? WAD
+      return sym === 'USDC' || sym === 'USDT' ? (BACKSTOP.pledgeUsd * 10n ** BigInt(bs.decimals[k]!) * WAD) / price : 0n
+    })
+    const done = await client.shipBackstop(wallet, bs, pledges, { kind: 'native' }, BACKSTOP.salt)
+    console.log(`backstop native   ${done.strategyHash} tx ${done.hash}`)
   }
 
   const market = await client.market()
