@@ -22,6 +22,14 @@ func e18(v float64) *big.Int {
 	return new(big.Int).Quo(r.Num(), r.Denom())
 }
 
+func a(v ...float64) []*big.Int {
+	out := make([]*big.Int, len(v))
+	for k, x := range v {
+		out[k] = e18(x)
+	}
+	return out
+}
+
 func TestSelectorsMatchSignatures(t *testing.T) {
 	if !bytes.Equal(latestRoundDataSelector, crypto.Keccak256([]byte("latestRoundData()"))[:4]) {
 		t.Fatal("latestRoundData selector")
@@ -41,15 +49,14 @@ func TestDecidePegged(t *testing.T) {
 		obs  Observation
 		halt bool
 	}{
-		{"at peg", Observation{Pegged: true, Feed: e18(0.9999), Api: e18(1.0001)}, false},
-		{"offchain hard depeg halts alone", Observation{Pegged: true, Feed: e18(0.9999), Api: e18(0.93)}, true},
-		{"chainlink hard depeg halts alone", Observation{Pegged: true, Feed: e18(0.96), Api: e18(0.99)}, true},
-		{"one soft source does not halt", Observation{Pegged: true, Feed: e18(1), Api: e18(0.991)}, false},
-		{"both soft sources halt", Observation{Pegged: true, Feed: e18(0.992), Api: e18(0.991)}, true},
-		{"depeg above peg halts", Observation{Pegged: true, Feed: e18(1), Api: e18(1.04)}, true},
-		{"halted stays halted outside resume band", Observation{Pegged: true, Feed: e18(0.995), Api: e18(0.996), Halted: true}, true},
-		{"halted resumes inside resume band", Observation{Pegged: true, Feed: e18(0.999), Api: e18(0.9985), Halted: true}, false},
-		{"halted stays halted with no data", Observation{Pegged: true, Halted: true}, true},
+		{"at peg", Observation{Pegged: true, Feed: e18(0.9999), Api: a(1.0001)}, false},
+		{"offchain hard depeg halts alone", Observation{Pegged: true, Feed: e18(0.9999), Api: a(0.93)}, true},
+		{"chainlink hard depeg halts alone", Observation{Pegged: true, Feed: e18(0.96), Api: a(0.99)}, true},
+		{"one soft source does not halt", Observation{Pegged: true, Feed: e18(1), Api: a(0.991)}, false},
+		{"both soft sources halt", Observation{Pegged: true, Feed: e18(0.992), Api: a(0.991)}, true},
+		{"depeg above peg halts", Observation{Pegged: true, Feed: e18(1), Api: a(1.04)}, true},
+		{"halted stays halted outside resume band", Observation{Pegged: true, Feed: e18(0.995), Api: a(0.996), Halted: true}, true},
+		{"halted resumes inside resume band", Observation{Pegged: true, Feed: e18(0.999), Api: a(0.9985), Halted: true}, false},
 		{"no data stays open", Observation{Pegged: true}, false},
 	}
 	for _, c := range cases {
@@ -67,10 +74,10 @@ func TestDecideFxUsesReferenceRate(t *testing.T) {
 		obs  Observation
 		halt bool
 	}{
-		{"EURC at EUR rate", Observation{Ref: eur, Feed: e18(1.1195), Api: e18(1.1203)}, false},
-		{"EURC below EUR by 5 percent halts", Observation{Ref: eur, Feed: e18(1.119), Api: e18(1.064)}, true},
-		{"EURC at 1 dollar is a depeg, not peg", Observation{Ref: eur, Api: e18(1.0)}, true},
-		{"BRZ at BRL rate with api only", Observation{Ref: e18(0.18), Api: e18(0.1801)}, false},
+		{"EURC at EUR rate", Observation{Ref: eur, Feed: e18(1.1195), Api: a(1.1203)}, false},
+		{"EURC below EUR by 5 percent halts", Observation{Ref: eur, Feed: e18(1.119), Api: a(1.064)}, true},
+		{"EURC at 1 dollar is a depeg, not peg", Observation{Ref: eur, Api: a(1.0)}, true},
+		{"BRZ at BRL rate with api only", Observation{Ref: e18(0.18), Api: a(0.1801)}, false},
 	}
 	for _, c := range cases {
 		d := Decide(cfg, c.obs, 0)
@@ -85,14 +92,14 @@ func TestDecideFxUsesReferenceRate(t *testing.T) {
 }
 
 func TestDecideUnknownReferenceIsNotReported(t *testing.T) {
-	d := Decide(cfg, Observation{Api: e18(1.12), Halted: true}, 0)
+	d := Decide(cfg, Observation{Api: a(1.12), Halted: true}, 0)
 	if d.Known || !d.Halt || d.Push {
 		t.Fatalf("stale fx rate must keep onchain state untouched: %+v", d)
 	}
 }
 
 func TestDecidePrefersOffchainPrice(t *testing.T) {
-	d := Decide(cfg, Observation{Pegged: true, Feed: e18(0.9999), Api: e18(0.93)}, 0)
+	d := Decide(cfg, Observation{Pegged: true, Feed: e18(0.9999), Api: a(0.93)}, 0)
 	if d.PriceE18.Cmp(e18(0.93)) != 0 {
 		t.Fatalf("price %s", d.PriceE18)
 	}
@@ -106,21 +113,61 @@ func TestPushRules(t *testing.T) {
 		obs  Observation
 		push bool
 	}{
-		{"fx move under threshold", Observation{Ref: eur, Api: e18(1.12011), OnchainPrice: eur, OnchainAt: now - 60}, false},
-		{"fx move over threshold", Observation{Ref: eur, Api: e18(1.1203), OnchainPrice: eur, OnchainAt: now - 60}, true},
-		{"fx heartbeat", Observation{Ref: eur, Api: eur, OnchainPrice: eur, OnchainAt: now - 600}, true},
-		{"fx never reported", Observation{Ref: eur, Api: eur}, true},
-		{"pegged quiet coin never pushes", Observation{Pegged: true, Api: e18(0.9995), OnchainAt: now - 99_999}, false},
-		{"pegged halt flips", Observation{Pegged: true, Api: e18(0.9), OnchainPrice: e18(1), OnchainAt: now}, true},
-		{"halted coin price moves", Observation{Pegged: true, Api: e18(0.85), Halted: true, OnchainPrice: e18(0.9), OnchainAt: now}, true},
-		{"halted coin steady", Observation{Pegged: true, Api: e18(0.9), Halted: true, OnchainPrice: e18(0.9), OnchainAt: now - 10}, false},
-		{"halted coin heartbeat", Observation{Pegged: true, Api: e18(0.9), Halted: true, OnchainPrice: e18(0.9), OnchainAt: now - 600}, true},
-		{"resume pushes", Observation{Pegged: true, Api: e18(1), Feed: e18(1), Halted: true, OnchainPrice: e18(0.9), OnchainAt: now}, true},
+		{"fx move under threshold", Observation{Ref: eur, Api: a(1.12011), OnchainPrice: eur, OnchainAt: now - 60}, false},
+		{"fx move over threshold", Observation{Ref: eur, Api: a(1.1203), OnchainPrice: eur, OnchainAt: now - 60}, true},
+		{"fx heartbeat", Observation{Ref: eur, Api: []*big.Int{eur}, OnchainPrice: eur, OnchainAt: now - 600}, true},
+		{"fx never reported", Observation{Ref: eur, Api: []*big.Int{eur}}, true},
+		{"pegged quiet coin never pushes", Observation{Pegged: true, Api: a(0.9995), OnchainAt: now - 99_999}, false},
+		{"pegged halt flips", Observation{Pegged: true, Api: a(0.9), OnchainPrice: e18(1), OnchainAt: now}, true},
+		{"halted coin price moves", Observation{Pegged: true, Api: a(0.85), Halted: true, OnchainPrice: e18(0.9), OnchainAt: now}, true},
+		{"halted coin steady", Observation{Pegged: true, Api: a(0.9), Halted: true, OnchainPrice: e18(0.9), OnchainAt: now - 10}, false},
+		{"halted coin heartbeat", Observation{Pegged: true, Api: a(0.9), Halted: true, OnchainPrice: e18(0.9), OnchainAt: now - 600}, true},
+		{"resume pushes", Observation{Pegged: true, Api: a(1), Feed: e18(1), Halted: true, OnchainPrice: e18(0.9), OnchainAt: now}, true},
 	}
 	for _, c := range cases {
 		if got := Decide(cfg, c.obs, now); got.Push != c.push {
 			t.Errorf("%s: push=%v want %v (%s)", c.name, got.Push, c.push, got.Reason)
 		}
+	}
+}
+
+func TestOneStaleApiCannotHalt(t *testing.T) {
+	d := Decide(cfg, Observation{Pegged: true, Feed: e18(0.9998), Api: a(0.93, 1.0)}, 0)
+	if d.Halt {
+		t.Fatalf("one API at 0.93 and one at 1.00 must not halt: %s", d.Reason)
+	}
+	d = Decide(cfg, Observation{Pegged: true, Feed: e18(0.9998), Api: a(0.93, 0.94)}, 0)
+	if !d.Halt {
+		t.Fatalf("both APIs crashed must halt: %s", d.Reason)
+	}
+}
+
+func TestHaltedPriceIsTheLowestSource(t *testing.T) {
+	d := Decide(cfg, Observation{Pegged: true, Feed: e18(0.97), Api: a(0.93, 0.95)}, 0)
+	if !d.Halt || d.PriceE18.Cmp(e18(0.93)) != 0 {
+		t.Fatalf("halted price %v want 0.93", d.PriceE18)
+	}
+	d = Decide(cfg, Observation{Pegged: true, Feed: e18(0.90), Api: a(0.93, 0.94)}, 0)
+	if d.PriceE18.Cmp(e18(0.90)) != 0 {
+		t.Fatalf("halted price %v want the feed 0.90", d.PriceE18)
+	}
+}
+
+func TestHaltedWithoutMarketDataIsNotReported(t *testing.T) {
+	d := Decide(cfg, Observation{Pegged: true, Halted: true, OnchainPrice: e18(0.9), OnchainAt: 1}, 10_000)
+	if d.Known || !d.Halt || d.Push {
+		t.Fatalf("a halted coin with no data must not be refreshed at the reference rate: %+v", d)
+	}
+	d = Decide(cfg, Observation{Ref: e18(1.12), Halted: true}, 0)
+	if d.Known {
+		t.Fatalf("halted FX coin with no market data must not be reported: %+v", d)
+	}
+}
+
+func TestHealthyPriceIsTheMedianQuote(t *testing.T) {
+	d := Decide(cfg, Observation{Ref: e18(1.12), Api: a(1.1202, 1.1198)}, 0)
+	if d.Halt || d.PriceE18.Cmp(e18(1.12)) != 0 {
+		t.Fatalf("healthy price %v", d.PriceE18)
 	}
 }
 
@@ -166,10 +213,16 @@ func TestParsePrice(t *testing.T) {
 	}
 }
 
-func TestParseApiMissingIsZero(t *testing.T) {
-	a := ParseApi([]byte(`{"USDC":1,"USDe":0.93}`), []string{"USDC", "DAI", "USDe", ""})
-	if a.Get(0).Cmp(oneE18) != 0 || a.Get(1).Sign() != 0 || a.Get(2).Cmp(e18(0.93)) != 0 || a.Get(3).Sign() != 0 || a.Get(8).Sign() != 0 {
-		t.Fatalf("parse api: %v %v %v %v", a.Get(0), a.Get(1), a.Get(2), a.Get(3))
+func TestParseApiMasksMissingCoins(t *testing.T) {
+	p := ParseApi([]byte(`{"USDC":1,"USDe":0.93,"DAI":0}`), []string{"USDC", "DAI", "USDe", ""})
+	if p.Mask != 0b101 {
+		t.Fatalf("mask %b", p.Mask)
+	}
+	if p.Get(0).Cmp(oneE18) != 0 || p.Get(1) != nil || p.Get(2).Cmp(e18(0.93)) != 0 || p.Get(3) != nil || p.Get(8) != nil {
+		t.Fatalf("parse api: %v %v %v %v", p.Get(0), p.Get(1), p.Get(2), p.Get(3))
+	}
+	if p.P1.Sign() != 0 {
+		t.Fatal("missing coins still carry a zero for serialization")
 	}
 }
 

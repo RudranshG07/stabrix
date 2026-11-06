@@ -103,11 +103,9 @@ func onTick(config *Config, runtime cre.Runtime, _ *cron.Payload) (*Result, erro
 		if plan.Market[k] >= 0 {
 			obs.Feed = FreshFeed(results[plan.Market[k]], config.FeedDecimals, config.MarketMaxAgeSec, now)
 		}
-		quotes := make([]*big.Int, 0, len(apis))
 		for a := range apis {
-			quotes = append(quotes, apis[a].Get(k))
+			obs.Api = append(obs.Api, apis[a].Get(k))
 		}
-		obs.Api = Median(quotes)
 
 		d := Decide(config, obs, now)
 		logger.Info("observed", "token", t.Symbol, "ref", obs.Ref, "feed", obs.Feed, "api", obs.Api,

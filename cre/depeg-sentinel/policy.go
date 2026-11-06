@@ -62,7 +62,7 @@ type Observation struct {
 	Pegged       bool
 	Ref          *big.Int
 	Feed         *big.Int
-	Api          *big.Int
+	Api          []*big.Int
 	Halted       bool
 	OnchainPrice *big.Int
 	OnchainAt    int64
@@ -94,6 +94,9 @@ func deviationBps(price, ref *big.Int) int64 {
 
 func positive(v *big.Int) bool { return v != nil && v.Sign() > 0 }
 
+// Decide halts on the least alarming offchain quote, so one stale API cannot halt a healthy coin, and reports the
+// lowest market price for a halted coin, which is the safe side for backstop makers. A halted coin with no market
+// data is not reported, so its onchain price ages out instead of being refreshed with the reference rate.
 func Decide(cfg *Config, o Observation, now int64) Decision {
 	ref := o.Ref
 	if o.Pegged {
@@ -102,14 +105,15 @@ func Decide(cfg *Config, o Observation, now int64) Decision {
 	if !positive(ref) {
 		return Decision{Halt: o.Halted, Reason: "no reference rate"}
 	}
-	feedOk, apiOk := positive(o.Feed), positive(o.Api)
-
-	d := Decision{Known: true, PriceE18: ref}
-	switch {
-	case apiOk:
-		d.PriceE18 = o.Api
-	case feedOk:
-		d.PriceE18 = o.Feed
+	var quotes []*big.Int
+	for _, q := range o.Api {
+		if positive(q) {
+			quotes = append(quotes, q)
+		}
+	}
+	feedOk, apiOk := positive(o.Feed), len(quotes) > 0
+	if !feedOk && !apiOk && o.Halted {
+		return Decision{Halt: true, Reason: "no market data while halted"}
 	}
 
 	var feedDev, apiDev int64
@@ -117,9 +121,15 @@ func Decide(cfg *Config, o Observation, now int64) Decision {
 		feedDev = deviationBps(o.Feed, ref)
 	}
 	if apiOk {
-		apiDev = deviationBps(o.Api, ref)
+		apiDev = deviationBps(quotes[0], ref)
+		for _, q := range quotes[1:] {
+			if dev := deviationBps(q, ref); dev < apiDev {
+				apiDev = dev
+			}
+		}
 	}
 
+	d := Decision{Known: true}
 	switch {
 	case apiOk && apiDev >= cfg.HardBps:
 		d.Halt, d.Reason = true, fmt.Sprintf("offchain %dbps >= hard %dbps", apiDev, cfg.HardBps)
@@ -128,7 +138,7 @@ func Decide(cfg *Config, o Observation, now int64) Decision {
 	case apiOk && feedOk && apiDev >= cfg.SoftBps && feedDev >= cfg.SoftBps:
 		d.Halt, d.Reason = true, fmt.Sprintf("both sources >= soft %dbps", cfg.SoftBps)
 	case o.Halted:
-		calm := (apiOk || feedOk) && (!apiOk || apiDev <= cfg.ResumeBps) && (!feedOk || feedDev <= cfg.ResumeBps)
+		calm := (!apiOk || apiDev <= cfg.ResumeBps) && (!feedOk || feedDev <= cfg.ResumeBps)
 		d.Halt = !calm
 		if calm {
 			d.Reason = "back within resume band"
@@ -137,6 +147,26 @@ func Decide(cfg *Config, o Observation, now int64) Decision {
 		}
 	default:
 		d.Reason = "within peg"
+	}
+
+	switch {
+	case d.Halt:
+		market := append([]*big.Int{}, quotes...)
+		if feedOk {
+			market = append(market, o.Feed)
+		}
+		d.PriceE18 = market[0]
+		for _, m := range market[1:] {
+			if m.Cmp(d.PriceE18) < 0 {
+				d.PriceE18 = m
+			}
+		}
+	case apiOk:
+		d.PriceE18 = Median(quotes)
+	case feedOk:
+		d.PriceE18 = o.Feed
+	default:
+		d.PriceE18 = ref
 	}
 
 	d.Push = d.Halt != o.Halted
@@ -203,16 +233,19 @@ func ParsePriceE18(body []byte, path string) (*big.Int, error) {
 	return new(big.Int).Quo(r.Num(), r.Denom()), nil
 }
 
+// ApiPrices carries one API's prices for up to MaxTokens coins. Mask marks which coins the API returned and must be
+// identical across nodes, so a coin missing on some nodes never mixes zeros into the median.
 type ApiPrices struct {
-	P0 *big.Int `consensus_aggregation:"median"`
-	P1 *big.Int `consensus_aggregation:"median"`
-	P2 *big.Int `consensus_aggregation:"median"`
-	P3 *big.Int `consensus_aggregation:"median"`
-	P4 *big.Int `consensus_aggregation:"median"`
-	P5 *big.Int `consensus_aggregation:"median"`
-	P6 *big.Int `consensus_aggregation:"median"`
-	P7 *big.Int `consensus_aggregation:"median"`
-	P8 *big.Int `consensus_aggregation:"median"`
+	Mask uint64   `consensus_aggregation:"identical"`
+	P0   *big.Int `consensus_aggregation:"median"`
+	P1   *big.Int `consensus_aggregation:"median"`
+	P2   *big.Int `consensus_aggregation:"median"`
+	P3   *big.Int `consensus_aggregation:"median"`
+	P4   *big.Int `consensus_aggregation:"median"`
+	P5   *big.Int `consensus_aggregation:"median"`
+	P6   *big.Int `consensus_aggregation:"median"`
+	P7   *big.Int `consensus_aggregation:"median"`
+	P8   *big.Int `consensus_aggregation:"median"`
 }
 
 func (a *ApiPrices) slots() [MaxTokens]**big.Int {
@@ -229,7 +262,12 @@ func NewApiPrices() ApiPrices {
 
 func (a *ApiPrices) Set(k int, v *big.Int) { *a.slots()[k] = v }
 
-func (a *ApiPrices) Get(k int) *big.Int { return *a.slots()[k] }
+func (a *ApiPrices) Get(k int) *big.Int {
+	if a.Mask&(1<<uint(k)) == 0 {
+		return nil
+	}
+	return *a.slots()[k]
+}
 
 func ParseApi(body []byte, paths []string) ApiPrices {
 	a := NewApiPrices()
@@ -239,6 +277,7 @@ func ParseApi(body []byte, paths []string) ApiPrices {
 		}
 		if v, err := ParsePriceE18(body, p); err == nil {
 			a.Set(k, v)
+			a.Mask |= 1 << uint(k)
 		}
 	}
 	return a

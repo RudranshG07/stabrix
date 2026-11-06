@@ -41,7 +41,7 @@ func rpc(t *testing.T, url, method string, params ...any) json.RawMessage {
 	}
 	defer resp.Body.Close()
 	var out struct {
-		Result json.RawMessage `json:"result"`
+		Result json.RawMessage           `json:"result"`
 		Error  *struct{ Message string } `json:"error"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
@@ -114,7 +114,7 @@ func TestForkReadsAndDecisions(t *testing.T) {
 		if plan.Market[k] >= 0 {
 			obs.Feed = FreshFeed(results[plan.Market[k]], cfg.FeedDecimals, cfg.MarketMaxAgeSec, now)
 		}
-		obs.Api = Median([]*big.Int{api.Get(k)})
+		obs.Api = []*big.Int{api.Get(k)}
 		d := Decide(cfg, obs, now)
 		if !d.Known {
 			t.Fatalf("%s: unknown decision", tk.Symbol)
