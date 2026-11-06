@@ -141,6 +141,25 @@ cd ../cre && cre workflow simulate depeg-sentinel -T testnet-settings --broadcas
 
 This writes `deployments/84532.json`.
 
+### Live on Base mainnet
+
+Deployed against 1inch's official Aqua and AquaSwapVMRouter on Base, with real USDC and EURC.
+
+| Contract | Address |
+|---|---|
+| StabrixRouter | [0xEbdbc7e05cfE6F8D2980d7EA4f40462e961808eB](https://basescan.org/address/0xEbdbc7e05cfE6F8D2980d7EA4f40462e961808eB) |
+| StabrixExtruction | [0xc8721a6c1b8fAeC6E9Ef03e7EbD9d3fC7E7C45E9](https://basescan.org/address/0xc8721a6c1b8fAeC6E9Ef03e7EbD9d3fC7E7C45E9) |
+| StabrixBackstop | [0x2Af9211c1Ffe418345bC6979d563ca9eC05D7DEc](https://basescan.org/address/0x2Af9211c1Ffe418345bC6979d563ca9eC05D7DEc) |
+| StabrixOracle | [0xD3BD0E168759C516af8CEFA5afC3Fdc6Af186Ed7](https://basescan.org/address/0xD3BD0E168759C516af8CEFA5afC3Fdc6Af186Ed7) |
+| StabrixBatchTaker | [0xf934Dd022a6d2623E753710fd68A374fD0ab4b95](https://basescan.org/address/0xf934Dd022a6d2623E753710fd68A374fD0ab4b95) |
+| StabrixLens | [0x86f41CF038bd17fC96FB0ff07ac0B3539E9829B6](https://basescan.org/address/0x86f41CF038bd17fC96FB0ff07ac0B3539E9829B6) |
+| 1inch Aqua (official) | [0x1111113CCf1426A8E30e2bfF5E005d929bF6a90a](https://basescan.org/address/0x1111113CCf1426A8E30e2bfF5E005d929bF6a90a) |
+| 1inch AquaSwapVMRouter (official) | [0x111111338c5091E8440b67B168bAe16a668AC0De](https://basescan.org/address/0x111111338c5091E8440b67B168bAe16a668AC0De) |
+
+Seeded with a small amount of real money by `npm run seed:mainnet`: one wallet holding $1.70 of USDC and EURC runs a Balanced range on the Stabrix router ([tx](https://basescan.org/tx/0x5b3828126942a9fab8c87b5b6bf740fb00ed3fedf3176c85b3496cb10a3ad8ae)), a Wide range on 1inch's router ([tx](https://basescan.org/tx/0x274b52dc74cd271031e018c0de805d614a7d8b9463ab412e2f6bdab0b8c6e3b8)) and a backstop covering the other seven coins ([tx](https://basescan.org/tx/0xe2d2c91438f1121df2dd5c17d30b8524446c1b89a50cf53b47afc0445008a37c)): $3.74 of strategies from $1.70, a shared liquidity ratio of 2.20x. It proves the contracts on Base with real tokens and both 1inch routers; it is not a market sized for real trades. The deploy cost 0.0000656 ETH (about $0.15).
+
+The oracle accepts Chainlink CRE reports only from Chainlink's production forwarder and only once a workflow owner is set, which needs CRE deploy access. Until then FX rates come straight from the Chainlink feeds onchain and only the guardian can halt a coin.
+
 ### Live on Base Sepolia
 
 | Contract | Address |
