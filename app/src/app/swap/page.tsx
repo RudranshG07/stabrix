@@ -7,7 +7,7 @@ import { TxStatus } from '@/components/tx-status'
 import { Button, CoinDot, KindTag, Label, Panel, Pill, SectionHead, Skeleton, StatusTag, TokenSelect, VenueTag } from '@/components/ui'
 import { CURRENCY } from '@/lib/coins'
 import { formatAmount, formatPct, formatRate, formatUsd, shortAddress, toUnits } from '@/lib/format'
-import { formatRatio, priceOf, units, usd } from '@/lib/market'
+import { formatRatio, priceOf, units, usd, withoutMaker } from '@/lib/market'
 import { useBalances, useMarket, useStabrix } from '@/lib/stabrix'
 import { useTx } from '@/lib/tx'
 
@@ -47,10 +47,11 @@ export default function SwapPage() {
   const inHalted = pIn?.halted ?? false
   const outHalted = pOut?.halted ?? false
 
+  const me = signer?.address
   const quote: Quote | null = useMemo(() => {
     if (!market.data || !amount || amount === 0n || tokenIn === tokenOut) return null
-    return client.quoteExactIn(market.data, tIn.address, tOut.address, amount)
-  }, [market.data, amount, tokenIn, tokenOut, client, tIn.address, tOut.address])
+    return client.quoteExactIn(withoutMaker(market.data, me), tIn.address, tOut.address, amount)
+  }, [market.data, amount, tokenIn, tokenOut, client, tIn.address, tOut.address, me])
 
   const marketIn = inHalted ? pIn?.depegE18 : pIn?.priceE18
   const usdIn = amount ? usd(amount, tIn.decimals, marketIn) : null
@@ -61,6 +62,8 @@ export default function SwapPage() {
   const minOut = quote ? (quote.amountOut * BigInt(10_000 - slippage)) / 10_000n : 0n
   const balanceIn = balances.data?.[tokens.indexOf(tIn)]
   const backstopRoute = quote?.strategies[0]?.kind === 'backstop'
+  const received = quote ? formatAmount(quote.amountOut, tOut.decimals, 4) : '0'
+  const amountLen = Math.max(text.length, received.length, 4)
 
   const flip = () => {
     setTokenIn(tokenOut)
@@ -142,7 +145,8 @@ export default function SwapPage() {
                 onChange={(e) => setText(e.target.value)}
                 placeholder="0"
                 aria-invalid={text !== '' && amount === null}
-                className="num min-w-0 flex-1 bg-transparent text-[40px] leading-tight outline-none placeholder:text-muted/50 sm:text-[48px]"
+                style={{ ['--len' as string]: amountLen }}
+                className="num amount min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted/50"
               />
               <TokenSelect id="token-in" label="Coin to pay" tokens={tokens} value={tokenIn} onChange={setTokenIn} />
             </div>
@@ -163,8 +167,8 @@ export default function SwapPage() {
           <Field>
             <p className="text-[10.5px] font-bold tracking-[0.14em] uppercase">You receive</p>
             <div className="mt-2 flex items-center gap-3">
-              <output aria-live="polite" className="num min-w-0 flex-1 truncate text-[40px] leading-tight sm:text-[48px]">
-                {market.isLoading ? <Skeleton className="h-12 w-40" /> : quote ? formatAmount(quote.amountOut, tOut.decimals, 4) : '0'}
+              <output aria-live="polite" style={{ ['--len' as string]: amountLen }} className="num amount min-w-0 flex-1 truncate">
+                {market.isLoading ? <Skeleton className="h-12 w-40" /> : received}
               </output>
               <TokenSelect id="token-out" label="Coin to receive" tokens={tokens} value={tokenOut} onChange={setTokenOut} />
             </div>
