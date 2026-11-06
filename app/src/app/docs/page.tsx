@@ -27,7 +27,7 @@ const CHAPTERS: [string, string][] = [
 function Tex({ children }: { children: string }) {
   return (
     <div
-      className="my-4 overflow-x-auto rounded-[16px] border-2 border-dashed border-line px-4 py-3 text-center text-[19px]"
+      className="my-4 overflow-x-auto rounded-xl border border-line px-4 py-3 text-center text-[15px]"
       dangerouslySetInnerHTML={{ __html: katex.renderToString(children, { displayMode: true, throwOnError: false, output: 'html' }) }}
     />
   )
@@ -36,20 +36,20 @@ function Tex({ children }: { children: string }) {
 function Section({ id, children }: { id: string; children: ReactNode }) {
   const k = CHAPTERS.findIndex(([c]) => c === id)
   return (
-    <section id={id} className="scroll-mt-28 border-t-[3px] border-surface-line pt-10">
-      <p className="num text-[15px] tracking-[0.2em] text-muted uppercase">{String(k + 1).padStart(2, '0')}</p>
-      <h2 className="title mt-2 text-[34px] leading-none sm:text-[44px]">{CHAPTERS[k]![1]}</h2>
+    <section id={id} className="scroll-mt-28 border-t border-line pt-10">
+      <p className="num text-[13.5px] tracking-[0.08em] text-muted uppercase">{String(k + 1).padStart(2, '0')}</p>
+      <h2 className="title mt-2 text-[20px] leading-none sm:text-[24px]">{CHAPTERS[k]![1]}</h2>
       <div className="mt-6 space-y-4">{children}</div>
     </section>
   )
 }
 
 function P({ children }: { children: ReactNode }) {
-  return <p className="font-serif max-w-[46em] text-[18px] leading-relaxed">{children}</p>
+  return <p className="max-w-[46em] text-[14px] leading-relaxed">{children}</p>
 }
 
 function H3({ children }: { children: ReactNode }) {
-  return <h3 className="pt-3 text-[12px] font-bold tracking-[0.14em] uppercase">{children}</h3>
+  return <h3 className="pt-3 text-[12px] font-medium tracking-[0.08em] uppercase">{children}</h3>
 }
 
 function C({ children }: { children: ReactNode }) {
@@ -58,13 +58,13 @@ function C({ children }: { children: ReactNode }) {
 
 function List({ items, ordered = false }: { items: ReactNode[]; ordered?: boolean }) {
   return (
-    <ol className="font-serif max-w-[46em] space-y-2 text-[18px] leading-relaxed">
+    <ol className="max-w-[46em] space-y-2 text-[14px] leading-relaxed">
       {items.map((it, k) => (
         <li key={k} className="relative pl-7">
           {ordered ? (
-            <span className="num absolute top-0 left-0 text-[16px] text-muted">{k + 1}.</span>
+            <span className="num absolute top-0 left-0 text-[14px] text-muted">{k + 1}.</span>
           ) : (
-            <span className="absolute top-[0.7em] left-0.5 size-2 rotate-45 border-2 border-current" aria-hidden />
+            <span className="absolute top-[0.6em] left-1 size-1.5 rounded-full bg-current" aria-hidden />
           )}
           {it}
         </li>
@@ -78,9 +78,9 @@ function Table({ head, rows, mono = false }: { head: string[]; rows: ReactNode[]
     <div className="ink-card overflow-x-auto">
       <table className="w-full min-w-[560px] text-left">
         <thead>
-          <tr className="border-b-2 border-dashed border-line">
+          <tr className="border-b border-line">
             {head.map((h) => (
-              <th key={h} scope="col" className="px-5 py-3 text-[10.5px] font-bold tracking-[0.12em] text-muted uppercase">
+              <th key={h} scope="col" className="px-5 py-3 text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase">
                 {h}
               </th>
             ))}
@@ -88,11 +88,11 @@ function Table({ head, rows, mono = false }: { head: string[]; rows: ReactNode[]
         </thead>
         <tbody>
           {rows.map((r, k) => (
-            <tr key={k} className="border-b-2 border-dashed border-line last:border-0">
+            <tr key={k} className="border-b border-line last:border-0">
               {r.map((cell, j) => (
                 <td
                   key={j}
-                  className={`px-5 py-3 align-top ${j === 0 ? 'text-[15.5px] font-semibold' : mono ? 'font-mono text-[12.5px] break-all' : 'font-serif text-[17px]'}`}
+                  className={`px-5 py-3 align-top ${j === 0 ? 'text-[13.5px] font-medium' : mono ? 'font-mono text-[12px] break-all' : 'text-[14px]'}`}
                 >
                   {cell}
                 </td>
@@ -107,7 +107,7 @@ function Table({ head, rows, mono = false }: { head: string[]; rows: ReactNode[]
 
 function Code({ children }: { children: string }) {
   return (
-    <pre className="overflow-x-auto rounded-[20px] border-[3px] border-surface-line bg-ink p-5 font-mono text-[12.5px] leading-relaxed text-on-accent">
+    <pre className="overflow-x-auto rounded-xl border border-line bg-ink p-5 font-mono text-[12px] leading-relaxed text-on-accent">
       {children}
     </pre>
   )
@@ -116,8 +116,8 @@ function Code({ children }: { children: string }) {
 function QA({ q, children }: { q: string; children: ReactNode }) {
   return (
     <div className="ink-card p-5">
-      <p className="text-[15px] font-semibold">{q}</p>
-      <p className="font-serif mt-2 text-[17.5px] leading-relaxed text-muted">{children}</p>
+      <p className="text-[13.5px] font-medium">{q}</p>
+      <p className="mt-2 text-[14px] leading-relaxed text-muted">{children}</p>
     </div>
   )
 }
@@ -181,13 +181,13 @@ export default function DocsPage() {
   return (
     <div className="grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
       <aside className="lg:sticky lg:top-28 lg:max-h-[calc(100dvh-8rem)] lg:self-start lg:overflow-y-auto">
-        <p className="num text-[16px] tracking-[0.2em] uppercase">Stabrix · Docs</p>
+        <p className="num text-[14px] tracking-[0.08em] uppercase">Stabrix · Docs</p>
         <nav aria-label="Docs chapters" className="ink-card mt-4 p-3 lg:mt-6">
           <ol className="grid grid-cols-2 gap-x-3 lg:grid-cols-1">
             {CHAPTERS.map(([id, label], k) => (
               <li key={id}>
-                <a href={`#${id}`} className="flex items-baseline gap-2.5 rounded-xl px-2.5 py-1.5 text-[14px] transition-colors hover:bg-surface-hover">
-                  <span className="text-[10px] font-bold tracking-[0.1em] text-muted">{String(k + 1).padStart(2, '0')}</span>
+                <a href={`#${id}`} className="flex items-baseline gap-2.5 rounded-xl px-2.5 py-1.5 text-[13px] transition-colors hover:bg-surface-hover">
+                  <span className="text-[10px] font-medium tracking-[0.08em] text-muted">{String(k + 1).padStart(2, '0')}</span>
                   {label}
                 </a>
               </li>
@@ -198,8 +198,8 @@ export default function DocsPage() {
 
       <article className="min-w-0 space-y-14">
         <header>
-          <h1 className="title text-[36px] leading-[0.95] sm:text-[64px]">Documentation</h1>
-          <p className="font-serif mt-4 max-w-[40em] text-[20px] leading-snug text-muted">
+          <h1 className="title text-[24px] leading-[0.95] sm:text-[28px]">Documentation</h1>
+          <p className="mt-4 max-w-[40em] text-[15px] leading-snug text-muted">
             How Stabrix prices stablecoin FX on 1inch Aqua, protects liquidity providers when a coin breaks, and uses Chainlink CRE for rates and halts.
           </p>
         </header>

@@ -75,10 +75,9 @@ export default function PoolPage() {
   return (
     <div className="space-y-12">
       <SectionHead
-        index="Stabrix · 03"
         title="Pool"
         aside={
-          <p className="font-serif max-w-sm text-[17px] leading-snug text-muted sm:text-right">
+          <p className="max-w-2xl text-[14px] leading-snug text-muted">
             One curve over {deployment.tokens.length} stablecoins, made of every LP's wallet. Nothing here is deposited.
           </p>
         }
@@ -97,27 +96,27 @@ export default function PoolPage() {
           <Panel className="p-5 sm:p-7">
             <div className="flex items-baseline justify-between gap-3">
               <Label>Reserve mix</Label>
-              <span className="num text-[16px] text-muted">{m ? formatUsd(inRanges, 0) : ''}</span>
+              <span className="num text-[14px] text-muted">{m ? formatUsd(inRanges, 0) : ''}</span>
             </div>
             {!m ? (
               <Skeleton className="mt-5 h-40" />
             ) : inRanges === 0 ? (
-              <p className="font-serif mt-5 text-[17px] text-muted">No liquidity yet. Open a range on the Liquidity page.</p>
+              <p className="mt-5 text-[14px] text-muted">No liquidity yet. Open a range on the Liquidity page.</p>
             ) : (
               <>
-                <div className="mt-5 flex h-4 overflow-hidden rounded-full border-2 border-surface-line" role="img" aria-label="Share of each coin in the pool">
+                <div className="mt-5 flex h-4 overflow-hidden rounded-full border border-line" role="img" aria-label="Share of each coin in the pool">
                   {perCoin.map(({ token, usd }) => (
                     <span key={token.address} style={{ width: `${(usd / inRanges) * 100}%`, background: COIN_HEX[token.symbol] }} />
                   ))}
                 </div>
-                <ul className="mt-4 divide-y-2 divide-dashed divide-line">
+                <ul className="mt-4 divide-y divide-line">
                   {perCoin.map(({ token, usd }) => (
                     <li key={token.address} className="flex items-center gap-3 py-2.5">
                       <CoinDot symbol={token.symbol} />
-                      <span className="w-14 text-[12px] font-bold tracking-[0.06em]">{token.symbol}</span>
-                      <span className="text-[10.5px] font-bold tracking-[0.12em] text-muted uppercase">{CURRENCY[token.symbol]}</span>
-                      <span className="num ml-auto text-[17px]">{formatUsd(usd, 0)}</span>
-                      <span className="num w-16 text-right text-[15px] text-muted">{((usd / inRanges) * 100).toFixed(1)}%</span>
+                      <span className="w-14 text-[12px] font-medium tracking-[0.06em]">{token.symbol}</span>
+                      <span className="text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase">{CURRENCY[token.symbol]}</span>
+                      <span className="num ml-auto text-[14px]">{formatUsd(usd, 0)}</span>
+                      <span className="num w-16 text-right text-[13.5px] text-muted">{((usd / inRanges) * 100).toFixed(1)}%</span>
                     </li>
                   ))}
                 </ul>
@@ -130,7 +129,7 @@ export default function PoolPage() {
               <Label>Depth</Label>
               <TokenSelect id="depth-token" label="Coin to measure" tokens={deployment.tokens} value={depthToken} onChange={setDepthToken} />
             </div>
-            <p className="font-serif mt-2 text-[16px] text-muted">
+            <p className="mt-2 text-[14px] text-muted">
               How many dollars of {depthSymbol} the pool takes in before its price falls by each step from where it trades now, replayed on every live range with the contract math.
             </p>
             {!depth ? (
@@ -142,7 +141,7 @@ export default function PoolPage() {
                     const total = row.tight + row.balanced + row.wide
                     return (
                       <div key={row.band} className="flex h-full flex-col justify-end">
-                        <div className="flex flex-col-reverse overflow-hidden rounded-t-[6px] border-2 border-b-0 border-surface-line" style={{ height: `${(total / deepest) * 100}%` }}>
+                        <div className="flex flex-col-reverse overflow-hidden rounded-t-[4px] border border-b-0 border-line" style={{ height: `${(total / deepest) * 100}%` }}>
                           {(['tight', 'balanced', 'wide'] as const).map((k) => (
                             <span
                               key={k}
@@ -155,15 +154,15 @@ export default function PoolPage() {
                     )
                   })}
                 </div>
-                <div className="grid grid-cols-8 gap-2 border-t-2 border-surface-line pt-2">
+                <div className="grid grid-cols-8 gap-2 border-t border-line pt-2">
                   {depth.map((row) => (
                     <div key={row.band} className="text-center">
-                      <p className="num text-[13px]">−{((1 - row.band) * 100).toFixed(2).replace(/0$/, '')}%</p>
+                      <p className="num text-[12.5px]">−{((1 - row.band) * 100).toFixed(2).replace(/0$/, '')}%</p>
                       <p className="num text-[12px] text-muted">{compactUsd(row.tight + row.balanced + row.wide)}</p>
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-4 text-[10.5px] font-bold tracking-[0.12em] uppercase">
+                <div className="mt-3 flex flex-wrap gap-4 text-[10.5px] font-medium tracking-[0.08em] uppercase">
                   <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-ink" />Tight</span>
                   <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-violet" />Balanced</span>
                   <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm bg-series-lime" />Wide</span>
@@ -174,7 +173,7 @@ export default function PoolPage() {
 
           <Panel className="p-5 sm:p-7">
             <Label>Liquidity by depeg tolerance</Label>
-            <p className="font-serif mt-2 text-[16px] text-muted">How far a coin can fall before each range stops taking it, and the backstops that buy after.</p>
+            <p className="mt-2 text-[14px] text-muted">How far a coin can fall before each range stops taking it, and the backstops that buy after.</p>
             {!m ? (
               <Skeleton className="mt-5 h-36" />
             ) : (
@@ -182,24 +181,24 @@ export default function PoolPage() {
                 {byWidth.map(({ p, count, usd }) => (
                   <li key={p.id}>
                     <div className="flex items-baseline justify-between gap-3">
-                      <span className="text-[12px] font-bold tracking-[0.08em] uppercase">
+                      <span className="text-[12px] font-medium tracking-[0.08em] uppercase">
                         {p.label} <span className="text-muted">· edge at {(p.maxDeviationBps / 100).toFixed(1)}% · {count}</span>
                       </span>
-                      <span className="num text-[17px]">{formatUsd(usd, 0)}</span>
+                      <span className="num text-[14px]">{formatUsd(usd, 0)}</span>
                     </div>
-                    <div className="mt-1.5 h-3 overflow-hidden rounded-full border-2 border-surface-line bg-paper">
+                    <div className="mt-1.5 h-3 overflow-hidden rounded-full border border-line bg-paper">
                       <div className="h-full bg-ink" style={{ width: `${(usd / widest) * 100}%` }} />
                     </div>
                   </li>
                 ))}
                 <li>
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-[12px] font-bold tracking-[0.08em] uppercase">
+                    <span className="text-[12px] font-medium tracking-[0.08em] uppercase">
                       Backstops <span className="text-muted">· buy after a halt · {backstops.length}</span>
                     </span>
-                    <span className="num text-[17px]">{formatUsd(inBackstops, 0)}</span>
+                    <span className="num text-[14px]">{formatUsd(inBackstops, 0)}</span>
                   </div>
-                  <div className="mt-1.5 h-3 overflow-hidden rounded-full border-2 border-surface-line bg-paper">
+                  <div className="mt-1.5 h-3 overflow-hidden rounded-full border border-line bg-paper">
                     <div className="h-full bg-[#f6c945]" style={{ width: `${(inBackstops / widest) * 100}%` }} />
                   </div>
                   <p className="caption mt-1.5">Combined cap {formatUsd(capTotal, 0)} per halted coin.</p>

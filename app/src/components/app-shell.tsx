@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
@@ -32,7 +33,7 @@ function NetworkPill() {
   const oracle = useOracleStatus()
   const halted = oracle.data?.filter((s) => s.halted).length ?? 0
   return (
-    <div className="hidden min-h-10 items-center gap-2 rounded-full border-2 border-surface-line bg-surface px-3.5 text-[10.5px] font-bold tracking-[0.12em] uppercase lg:flex">
+    <div className="hidden min-h-9 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-[12.5px] lg:flex">
       <span className={`size-2 rounded-full ${halted ? 'bg-down' : 'bg-up'}`} aria-hidden />
       <span className="text-muted">{chain.name}</span>
       <span>{halted ? `${halted} halted` : 'Pegs live'}</span>
@@ -50,12 +51,9 @@ function Nav({ path, className }: { path: string; className: string }) {
             key={n.href}
             href={n.href}
             aria-current={active ? 'page' : undefined}
-            className={`relative py-2 text-[12px] font-bold tracking-[0.1em] whitespace-nowrap uppercase sm:tracking-[0.17em] transition-opacity ${
-              active ? 'opacity-100' : 'opacity-60 hover:opacity-100'
-            }`}
+            className={`py-2 text-[14px] whitespace-nowrap transition-colors ${active ? 'text-ink' : 'text-muted hover:text-ink'}`}
           >
             {n.label}
-            {active && <span className="absolute -bottom-0.5 left-0 h-[3px] w-full rounded-full bg-ink" aria-hidden />}
           </Link>
         )
       })}
@@ -69,28 +67,38 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (path === '/') return <>{children}</>
   return (
     <>
-      <header className="sticky top-0 z-20 border-b-[3px] border-surface-line bg-paper/95 backdrop-blur">
-        <div className="mx-auto flex h-[72px] max-w-6xl items-center gap-8 px-4 sm:px-6">
+      <header className="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-4 sm:px-6">
           <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="Stabrix home">
-            <AnchorMark />
-            <span className="font-display text-[27px] tracking-[-0.03em]">Stabrix</span>
+            <AnchorMark className="h-[21px] w-[18px]" />
+            <span className="text-[18px] font-semibold tracking-[-0.02em]">Stabrix</span>
           </Link>
           <Nav path={path} className="hidden gap-7 lg:flex" />
           <div className="ml-auto flex items-center gap-3">
             {ctx && <NetworkPill />}
-            <ThemeToggle className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-surface-line bg-surface transition-colors hover:bg-surface-hover [&>svg]:size-4" />
+            <ThemeToggle className="grid size-9 shrink-0 place-items-center rounded-lg border border-line bg-surface transition-colors hover:bg-surface-hover [&>svg]:size-4" />
             {ctx && <AccountMenu />}
           </div>
         </div>
-        <Nav path={path} className="flex gap-3 overflow-x-auto border-t-2 border-dashed border-line px-2.5 py-1.5 sm:justify-center sm:gap-7 lg:hidden" />
+        <Nav path={path} className="flex gap-4 overflow-x-auto border-t border-line px-4 py-1 sm:justify-center sm:gap-7 lg:hidden" />
       </header>
-      <main className="mx-auto max-w-6xl px-4 pt-12 pb-24 sm:px-6">
+      <main className="mx-auto max-w-6xl px-4 pt-10 pb-24 sm:px-6">
         {path === '/docs' ? children : <RequireDeployment>{children}</RequireDeployment>}
       </main>
-      <footer className="border-t-[3px] border-surface-line">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-[10.5px] font-bold tracking-[0.14em] uppercase sm:px-6">
+      <footer className="border-t border-line">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 font-mono text-[10.5px] tracking-[0.06em] uppercase sm:px-6">
           <span>Stabrix · liquidity that never leaves</span>
-          <span className="text-muted">1inch Aqua + SwapVM · Chainlink CRE · Base</span>
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-2 text-muted">
+            <span className="flex items-center gap-1.5">
+              <Image src="/brand/1inch.png" alt="" width={32} height={32} className="size-4 rounded-full" />
+              1inch Aqua + SwapVM
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Image src="/brand/chainlink.png" alt="" width={32} height={32} className="size-4 rounded-full" />
+              Chainlink CRE
+            </span>
+            <span>Base</span>
+          </span>
         </div>
       </footer>
     </>

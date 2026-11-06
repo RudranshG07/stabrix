@@ -16,7 +16,7 @@ export function ValueChart({ series, height = 220 }: { series: Series[]; height?
   const gutter = 52
   if (all.length < 2) {
     return (
-      <div className="grid place-items-center rounded-[18px] border-2 border-dashed border-line text-[10.5px] font-bold tracking-[0.14em] text-muted uppercase" style={{ height }}>
+      <div className="grid place-items-center rounded-xl border border-line text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase" style={{ height }}>
         Collecting data
       </div>
     )
@@ -43,7 +43,7 @@ export function ValueChart({ series, height = 220 }: { series: Series[]; height?
               strokeWidth={v === 0 ? 1.5 : 1}
               strokeDasharray={v === 0 ? undefined : '4 5'}
             />
-            <text x={gutter - 10} y={y(v)} textAnchor="end" dominantBaseline="middle" className="num fill-muted text-[14px]">
+            <text x={gutter - 10} y={y(v)} textAnchor="end" dominantBaseline="middle" className="num fill-muted text-[13.5px]">
               {v > 0 ? '+' : ''}
               {v.toFixed(2)}%
             </text>
@@ -71,7 +71,7 @@ export function ValueChart({ series, height = 220 }: { series: Series[]; height?
                 <line x1="1" x2="21" y1="3" y2="3" style={{ stroke: s.color }} strokeWidth={2.5} strokeDasharray={s.dashed ? '5 3' : undefined} strokeLinecap="round" />
               </svg>
               <span className="min-w-0 truncate text-muted">{s.label}</span>
-              <span className={`num ml-auto text-[15px] ${last < -0.005 ? 'text-down' : last > 0.005 ? 'text-up' : ''}`}>
+              <span className={`num ml-auto text-[14px] ${last < -0.005 ? 'text-down' : last > 0.005 ? 'text-up' : ''}`}>
                 {last > 0 ? '+' : ''}
                 {last.toFixed(2)}%
               </span>

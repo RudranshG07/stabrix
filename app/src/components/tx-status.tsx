@@ -21,7 +21,7 @@ export function TxStatus({ state }: { state: TxState }) {
   }[state.status]
   const explorer = !DEV_ACCOUNTS && ctx ? EXPLORERS[ctx.deployment.chainId] : undefined
   return (
-    <div role="status" aria-live="polite" className={`mt-4 flex items-start gap-2.5 rounded-[16px] border-2 px-4 py-3 text-[14px] leading-snug ${tone}`}>
+    <div role="status" aria-live="polite" className={`mt-4 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-[13px] leading-snug ${tone}`}>
       {state.status === 'pending' && <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin" aria-hidden />}
       {state.status === 'success' && <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />}
       {state.status === 'error' && <XCircle className="mt-0.5 size-4 shrink-0" aria-hidden />}

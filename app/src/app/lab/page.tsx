@@ -31,14 +31,14 @@ const CRASH = 0.93
 const DUMP_USD = 2_000n
 const EVENT_WINDOW = 9_000n
 const CRE_COMMAND = 'cd cre && cre workflow simulate depeg-sentinel -T fork-settings --broadcast --non-interactive --trigger-index 0'
-const small = 'text-[10.5px] font-bold tracking-[0.14em] uppercase'
+const small = 'text-[10.5px] font-medium tracking-[0.08em] uppercase'
 
 function Step({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
   return (
     <li className="grid grid-cols-[2.25rem_1fr] gap-x-3">
-      <span className="num pt-0.5 text-[22px] leading-none text-muted">{n}</span>
+      <span className="num pt-0.5 text-[16px] leading-none text-muted">{n}</span>
       <div className="min-w-0">
-        <p className="font-display text-[22px] leading-tight">{title}</p>
+        <p className="font-display text-[16px] leading-tight">{title}</p>
         <div className="mt-1.5 space-y-3">{children}</div>
       </div>
     </li>
@@ -48,14 +48,14 @@ function Step({ n, title, children }: { n: string; title: string; children: Reac
 function Copyable({ text }: { text: string }) {
   const [done, setDone] = useState(false)
   return (
-    <div className="flex items-start gap-2 rounded-[16px] border-2 border-surface-line bg-paper p-3">
+    <div className="flex items-start gap-2 rounded-xl border border-line bg-paper p-3">
       <code className="min-w-0 flex-1 font-mono text-[11.5px] leading-relaxed break-all">{text}</code>
       <button
         type="button"
         aria-label="Copy command"
         onClick={() => navigator.clipboard.writeText(text).then(() => setDone(true))}
         onBlur={() => setDone(false)}
-        className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-surface-line bg-surface transition-colors hover:bg-surface-hover"
+        className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-surface transition-colors hover:bg-surface-hover"
       >
         {done ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
       </button>
@@ -194,10 +194,9 @@ export default function LabPage() {
   return (
     <div className="space-y-12">
       <SectionHead
-        index="Stabrix · 05"
         title="Depeg"
         aside={
-          <p className="font-serif max-w-sm text-[17px] leading-snug text-muted sm:text-right">
+          <p className="max-w-2xl text-[14px] leading-snug text-muted">
             Break a coin and watch the system answer. Ranges stop at their edge, Chainlink CRE halts the coin, backstops buy it below market.
           </p>
         }
@@ -216,19 +215,19 @@ export default function LabPage() {
               type="button"
               aria-pressed={selected}
               onClick={() => setTarget(t.address)}
-              className={`rounded-[20px] border-2 border-surface-line p-3.5 text-left transition-[box-shadow,background-color] ${
+              className={`rounded-xl border border-line p-3.5 text-left transition-[box-shadow,background-color] ${
                 s?.halted ? 'bg-down/15' : 'bg-surface'
-              } ${selected ? 'shadow-[0_4px_0_0_var(--color-surface-line)]' : 'hover:bg-surface-hover'}`}
+              } ${selected ? '' : 'hover:bg-surface-hover'}`}
             >
               <span className="flex items-center gap-2">
                 <CoinDot symbol={t.symbol} />
-                <span className="text-[12.5px] font-bold tracking-[0.06em]">{t.symbol}</span>
-                <span className="hidden text-[10px] font-bold tracking-[0.12em] text-muted sm:inline">{CURRENCY[t.symbol]}</span>
+                <span className="text-[12px] font-medium tracking-[0.06em]">{t.symbol}</span>
+                <span className="hidden text-[10px] font-medium tracking-[0.08em] text-muted sm:inline">{CURRENCY[t.symbol]}</span>
                 <span className="ml-auto">
                   {s?.halted ? <Tag dot="var(--color-down)">{s.guardianHalted && !s.creHalted ? 'Guardian' : 'Halted'}</Tag> : <Tag dot="var(--color-up)">Live</Tag>}
                 </span>
               </span>
-              <dl className="mt-3 space-y-1 border-t-2 border-dashed border-line pt-2.5 text-[11px]">
+              <dl className="mt-3 space-y-1 border-t border-line pt-2.5 text-[11px]">
                 {(
                   [
                     ['Chainlink', feed == null ? '—' : formatRate(feed * 10n ** 10n, fx ? 5 : 4)],
@@ -238,8 +237,8 @@ export default function LabPage() {
                   ] as const
                 ).map(([term, value]) => (
                   <div key={term} className="flex justify-between gap-2">
-                    <dt className="font-bold tracking-[0.08em] text-muted uppercase">{term}</dt>
-                    <dd className="num text-[13px]">{value}</dd>
+                    <dt className="font-medium tracking-[0.08em] text-muted uppercase">{term}</dt>
+                    <dd className="num text-[12.5px]">{value}</dd>
                   </div>
                 ))}
               </dl>
@@ -253,7 +252,7 @@ export default function LabPage() {
           <Label>Scenario · {coin.symbol}</Label>
           <ol className="mt-6 space-y-8">
             <Step n="1" title={`Break ${coin.symbol} off-chain`}>
-              <p className="text-[14px] text-muted">
+              <p className="text-[13px] text-muted">
                 Price APIs move first. Chainlink feeds follow on deviation or heartbeat.
                 {fork ? ' On this fork the price API is local.' : ''}
               </p>
@@ -273,7 +272,7 @@ export default function LabPage() {
             </Step>
 
             <Step n="2" title="Chainlink CRE halts it">
-              <p className="text-[14px] text-muted">
+              <p className="text-[13px] text-muted">
                 Every 30 seconds the workflow reads Chainlink feeds and price APIs, agrees across nodes, and writes a signed report. More than 3% off peg halts
                 the coin everywhere.
               </p>
@@ -294,7 +293,7 @@ export default function LabPage() {
             </Step>
 
             <Step n="3" title={`Arbitrageurs dump ${coin.symbol}`}>
-              <p className="text-[14px] text-muted">
+              <p className="text-[13px] text-muted">
                 Before a halt, ranges absorb the coin until their edge. After it, ranges refuse it and only backstops buy, below market and never above face.
               </p>
               {fork && (
@@ -331,13 +330,13 @@ export default function LabPage() {
               {events.isLoading ? (
                 <Skeleton className="mt-4 h-40" />
               ) : events.isError ? (
-                <p className="mt-4 text-[14px] text-down">Could not read events from the RPC.</p>
+                <p className="mt-4 text-[13px] text-down">Could not read events from the RPC.</p>
               ) : (events.data ?? []).length === 0 ? (
-                <p className="font-serif mt-4 text-[16px] text-muted">No CRE reports or swaps yet.</p>
+                <p className="mt-4 text-[14px] text-muted">No CRE reports or swaps yet.</p>
               ) : (
-                <ul className="mt-3 divide-y-2 divide-dashed divide-line">
+                <ul className="mt-3 divide-y divide-line">
                   {events.data!.map((e) => (
-                    <li key={`${e.transactionHash}-${e.logIndex}`} className="flex items-baseline justify-between gap-3 py-2.5 text-[13.5px]">
+                    <li key={`${e.transactionHash}-${e.logIndex}`} className="flex items-baseline justify-between gap-3 py-2.5 text-[13px]">
                       <span className="min-w-0 truncate">
                         {e.eventName === 'BatchSwapped' && (
                           <>
@@ -347,19 +346,19 @@ export default function LabPage() {
                         )}
                         {e.eventName === 'StatusUpdated' && (
                           <>
-                            <span className={`font-semibold ${e.args.halted ? 'text-down' : 'text-up'}`}>
+                            <span className={`font-medium ${e.args.halted ? 'text-down' : 'text-up'}`}>
                               CRE {e.args.halted ? 'halted' : 'priced'} {symbolOf(e.args.token)}
                             </span>{' '}
                             <span className="num text-muted">{formatRate(e.args.priceE18, 5)}</span>
                           </>
                         )}
                         {e.eventName === 'GuardianOverride' && (
-                          <span className={`font-semibold ${e.args.halted ? 'text-down' : 'text-up'}`}>
+                          <span className={`font-medium ${e.args.halted ? 'text-down' : 'text-up'}`}>
                             Guardian {e.args.halted ? 'halted' : 'resumed'} {symbolOf(e.args.token)}
                           </span>
                         )}
                       </span>
-                      <span className="num shrink-0 text-[13px] text-muted">#{String(e.blockNumber)}</span>
+                      <span className="num shrink-0 text-[12.5px] text-muted">#{String(e.blockNumber)}</span>
                     </li>
                   ))}
                 </ul>
@@ -372,18 +371,18 @@ export default function LabPage() {
             {market.isLoading ? (
               <Skeleton className="mt-4 h-28" />
             ) : (
-              <ul className="mt-3 divide-y-2 divide-dashed divide-line">
+              <ul className="mt-3 divide-y divide-line">
                 {strategies.map((s) => {
                   const k = s.config.tokens.findIndex((t) => t.toLowerCase() === coin.address.toLowerCase())
                   const held = k >= 0 ? (s.balances[k] ?? 0n) : 0n
                   return (
                     <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5">
                       <KindTag kind={s.kind} />
-                      <span className="text-[12px] font-bold tracking-[0.04em]">{shortAddress(s.maker)}</span>
-                      <span className="num ml-auto text-[16px]">
+                      <span className="text-[12px] font-medium tracking-[0.04em]">{shortAddress(s.maker)}</span>
+                      <span className="num ml-auto text-[14px]">
                         {formatAmount(held, coin.decimals, 0)} {coin.symbol}
                       </span>
-                      <span className="num w-24 text-right text-[14px] text-muted">
+                      <span className="num w-24 text-right text-[13px] text-muted">
                         {market.data ? `$${Math.round(valueUsd(held, coin.decimals, priceOf(market.data, coin))).toLocaleString('en-US')}` : '—'}
                       </span>
                     </li>

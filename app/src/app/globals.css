@@ -31,13 +31,13 @@
   --color-tone-amber: #f0b36a;
   --color-tone-ink: #16130e;
 
-  --radius-card: 26px;
+  --radius-card: 14px;
 
-  --font-sans: var(--font-open), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-  --font-display: var(--font-goudy), Georgia, serif;
-  --font-serif: var(--font-garamond), Georgia, serif;
-  --font-pill: var(--font-josefin), var(--font-open), sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-sans);
+  --font-serif: var(--font-sans);
+  --font-pill: var(--font-sans);
 }
 
 :root[data-theme='dark'] {
@@ -79,45 +79,43 @@
 }
 
 @utility label {
-  @apply flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink;
+  @apply flex items-center gap-2 text-[10.5px] font-medium uppercase tracking-[0.08em] text-muted;
 }
 
 @utility caption {
-  @apply font-serif text-[15px] italic text-muted;
+  @apply text-[13px] text-muted;
 }
 
 @utility title {
-  font-family: var(--font-display);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: -0.04em;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.025em;
 }
 
 @utility num {
-  font-family: var(--font-serif);
-  font-variant-numeric: lining-nums tabular-nums;
-  font-feature-settings: 'lnum' 1, 'tnum' 1;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 @utility amount {
-  font-size: clamp(22px, calc(230px / var(--len, 4)), 40px);
+  font-size: clamp(22px, calc(200px / var(--len, 4)), 32px);
+  font-weight: 500;
+  letter-spacing: -0.03em;
   line-height: 1.25;
   @media (width >= 40rem) {
-    font-size: 48px;
+    font-size: 36px;
   }
 }
 
 @utility ink-card {
-  border: 3px solid var(--color-surface-line);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
   background: var(--color-surface);
-  box-shadow:
-    0 7px 0 -1px var(--color-paper),
-    0 7px 0 2px var(--color-surface-line);
 }
 
 @utility rule {
-  border-top: 2px dashed var(--color-line);
+  border-top: 1px solid var(--color-line);
 }
 
 @media (prefers-reduced-motion: reduce) {
