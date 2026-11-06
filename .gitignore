@@ -10,7 +10,7 @@ contracts/broadcast/
 dist/
 coverage/
 *.log
-deployments/base-fork.json
+deployments/base-fork*.json
 *.tsbuildinfo
 next-env.d.ts
 .next-verify/
