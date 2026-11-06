@@ -14,7 +14,7 @@ export function units(amount: bigint, decimals: number): number {
 }
 
 export function formatRatio(v: number): string {
-  if (!Number.isFinite(v) || v <= 0) return '—'
+  if (!Number.isFinite(v) || v <= 0) return '-'
   if (v >= 1000) return v.toLocaleString('en-US', { maximumFractionDigits: 2 })
   if (v >= 0.01) return v.toFixed(5)
   return v.toPrecision(4)

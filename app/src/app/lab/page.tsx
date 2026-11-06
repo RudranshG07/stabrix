@@ -230,10 +230,10 @@ export default function LabPage() {
               <dl className="mt-3 space-y-1 border-t border-line pt-2.5 text-[11px]">
                 {(
                   [
-                    ['Chainlink', feed == null ? '—' : formatRate(feed * 10n ** 10n, fx ? 5 : 4)],
+                    ['Chainlink', feed == null ? '-' : formatRate(feed * 10n ** 10n, fx ? 5 : 4)],
                     ['CRE', s?.observedAt ? formatRate(s.reportedE18, fx ? 5 : 4) : 'none'],
                     ...(fork ? [['API', api.isError ? 'offline' : api.data?.[t.symbol] !== undefined ? `$${api.data[t.symbol]!.toPrecision(5)}` : 'market'] as const] : []),
-                    ['Pool', p == null ? '—' : formatRate(p.halted ? (p.depegE18 ?? p.priceE18) : p.priceE18, fx ? 5 : 4)],
+                    ['Pool', p == null ? '-' : formatRate(p.halted ? (p.depegE18 ?? p.priceE18) : p.priceE18, fx ? 5 : 4)],
                   ] as const
                 ).map(([term, value]) => (
                   <div key={term} className="flex justify-between gap-2">
@@ -383,7 +383,7 @@ export default function LabPage() {
                         {formatAmount(held, coin.decimals, 0)} {coin.symbol}
                       </span>
                       <span className="num w-24 text-right text-[13px] text-muted">
-                        {market.data ? `$${Math.round(valueUsd(held, coin.decimals, priceOf(market.data, coin))).toLocaleString('en-US')}` : '—'}
+                        {market.data ? `$${Math.round(valueUsd(held, coin.decimals, priceOf(market.data, coin))).toLocaleString('en-US')}` : '-'}
                       </span>
                     </li>
                   )

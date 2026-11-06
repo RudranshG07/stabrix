@@ -315,7 +315,7 @@ export default function DocsPage() {
 
         <Section id="backstops">
           <P>
-            A backstop pledges payout coins (for example USDC and USDT) and covers every other coin in the pool. It does nothing until Chainlink CRE or the guardian halts a
+            A backstop pledges payout coins (for example USDC and USDT) and covers every coin in the pool, payout coins included: if USDC halts, it pays in USDT, and the USDC it already holds counts toward the cap. It does nothing until Chainlink CRE or the guardian halts a
             coin. Then it buys that coin, exact input only, and pays in a healthy coin.
           </P>
           <Table

@@ -93,7 +93,7 @@ function CoinToggle({
         <span className="text-[12px] font-medium tracking-[0.06em]">{token.symbol}</span>
         <span className="ml-auto text-[10px] font-medium tracking-[0.08em] text-muted">{CURRENCY[token.symbol]}</span>
       </span>
-      <span className="num mt-1 truncate text-[13.5px] text-muted">{balance === undefined ? '—' : usd > 0 ? formatUsd(usd, 0) : 'none held'}</span>
+      <span className="num mt-1 truncate text-[13.5px] text-muted">{balance === undefined ? '-' : usd > 0 ? formatUsd(usd, 0) : 'none held'}</span>
     </button>
   )
 }
@@ -156,7 +156,7 @@ function NeedList({ rows }: { rows: { token: TokenInfo; need: bigint; have: bigi
             <CoinDot symbol={token.symbol} />
             <span className="w-14 text-[12px] font-medium tracking-[0.06em]">{token.symbol}</span>
             <span className={`num ml-auto text-[14px] ${short ? 'text-down' : ''}`}>{formatAmount(need, token.decimals, 2)}</span>
-            <span className="num w-32 text-right text-[13px] text-muted">of {have === undefined ? '—' : formatAmount(have, token.decimals, 0)}</span>
+            <span className="num w-32 text-right text-[13px] text-muted">of {have === undefined ? '-' : formatAmount(have, token.decimals, 0)}</span>
           </li>
         )
       })}
@@ -363,7 +363,7 @@ function BackstopForm({ held, balances, market }: { held: TokenInfo[]; balances:
         </div>
         <p className="caption mt-2.5">
           {covered.length > 0
-            ? `Covers ${covered.map((t) => t.symbol).join(', ')}. If Chainlink CRE halts one, the backstop buys it and pays in your picked coins.`
+            ? `Covers all ${tokens.length} coins. If Chainlink CRE halts one, the backstop buys it and pays in your picked coins that are still healthy.`
             : 'Leave at least one coin unpicked for the backstop to cover.'}
         </p>
       </fieldset>
@@ -505,7 +505,7 @@ function StrategyCard({ s, market, onClose, busy }: { s: LiveStrategy; market: M
 
       {s.kind === 'backstop' && (
         <p className="caption mt-3">
-          Covers every coin not pledged. Cap {formatUsd(Number(s.config.capPerToken) / 1e18, 0)} per halted coin.
+          Covers every coin and pays in the healthy ones pledged. Cap {formatUsd(Number(s.config.capPerToken) / 1e18, 0)} per halted coin, counting what this backstop already holds of it.
           {fill.length > 0 && ` Buying ${fill.map((f) => client.token(f.token).symbol).join(', ')} now, ${formatUsd(Math.min(...fill.map((f) => f.roomUsd)), 0)} of room left.`}
         </p>
       )}

@@ -169,6 +169,7 @@ export function KindTag({ kind }: { kind: 'range' | 'backstop' }) {
   return kind === 'backstop' ? <Tag dot="#f6c945">Backstop</Tag> : <Tag dot="var(--color-ink)">FX range</Tag>
 }
 
-export function StatusTag({ halted }: { halted: boolean }) {
-  return halted ? <Tag dot="var(--color-down)">Halted</Tag> : <Tag dot="var(--color-up)">Live</Tag>
+export function StatusTag({ halted, stale }: { halted: boolean; stale?: boolean }) {
+  if (halted) return <Tag dot="var(--color-down)">Halted</Tag>
+  return stale ? <Tag dot="var(--color-muted)">Stale</Tag> : <Tag dot="var(--color-up)">Live</Tag>
 }

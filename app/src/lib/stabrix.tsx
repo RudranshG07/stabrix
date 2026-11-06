@@ -18,9 +18,10 @@ import {
   http,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
+import { Button } from '@/components/ui'
 import { fetchActivity } from './activity'
 import { ANVIL_ACCOUNTS, DEV_ACCOUNTS, POLL_MS, PRICE_API, RPC_URL } from './config'
-import { type Eip1193, type WalletOption, rememberWallet, rememberedWallet, useWalletOptions, walletError } from './wallets'
+import { type Eip1193, type WalletOption, onChain, rememberWallet, rememberedWallet, switchChain, useWalletOptions, walletError } from './wallets'
 
 export type Wallet = WalletClient<Transport, Chain, Account>
 
@@ -76,6 +77,7 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
         name: CHAIN_NAMES[deployment.chainId] ?? `Chain ${deployment.chainId}`,
         nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
         rpcUrls: { default: { http: [RPC_URL] } },
+        blockExplorers: EXPLORERS[deployment.chainId] ? { default: { name: 'Basescan', url: EXPLORERS[deployment.chainId]! } } : undefined,
         contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } },
       }),
     [deployment.chainId],
@@ -96,6 +98,7 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
     if (!DEV_ACCOUNTS || autoSelected.current) return
     autoSelected.current = true
     const first = ANVIL_ACCOUNTS[0]
+    if (!first) return
     setSigner({ kind: 'dev', index: first.index, label: first.label, address: privateKeyToAccount(first.key).address })
   }, [])
 
@@ -110,7 +113,7 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
     return createWalletClient({
       chain,
       account: { address: signer.address, type: 'json-rpc' } as Account,
-      transport: custom(provider),
+      transport: custom(onChain(provider, chain)),
     }) as Wallet
   }, [signer, chain, provider])
 
@@ -151,24 +154,7 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
     try {
       const [address] = (await p.request({ method: 'eth_requestAccounts' })) as string[]
       if (!address) throw new Error('No account selected in the wallet.')
-      const chainId = `0x${chain.id.toString(16)}`
-      try {
-        await p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId }] })
-      } catch (e) {
-        if ((e as { code?: number }).code !== 4902) throw e
-        await p.request({
-          method: 'wallet_addEthereumChain',
-          params: [
-            {
-              chainId,
-              chainName: chain.name,
-              nativeCurrency: chain.nativeCurrency,
-              rpcUrls: [RPC_URL],
-              blockExplorerUrls: EXPLORERS[chain.id] ? [EXPLORERS[chain.id]] : undefined,
-            },
-          ],
-        })
-      }
+      await switchChain(p, chain)
       setProvider(p)
       setSigner({ kind: 'injected', label: option.name, address: getAddress(address), walletId: option.id })
       rememberWallet(option.id)
@@ -203,23 +189,19 @@ export function RequireDeployment({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="py-12" aria-busy="true">
-        <div className="h-10 w-64 animate-pulse rounded-lg bg-surface-hover" />
-        <div className="mt-8 h-80 animate-pulse rounded-[26px] bg-surface-hover" />
+        <div className="h-7 w-48 animate-pulse rounded-lg bg-surface-hover" />
+        <div className="mt-6 h-80 animate-pulse rounded-(--radius-card) bg-surface-hover" />
       </div>
     )
   }
   return (
     <div className="max-w-xl py-12">
-      <p className="font-display text-[17px] tracking-[0.2em] uppercase">Not connected</p>
-      <h1 className="title mt-3 text-[44px] leading-none">No deployment found</h1>
-      <p className="mt-3 text-muted">{(error as Error)?.message ?? 'Start the devnet with ops/devnet.sh, then retry.'}</p>
-      <button
-        type="button"
-        onClick={() => refetch()}
-        className="font-pill mt-6 min-h-12 rounded-full border-[3px] border-surface-line bg-ink px-7 pt-[3px] text-[15px] text-on-accent uppercase"
-      >
+      <p className="label">Not connected</p>
+      <h1 className="title mt-2 text-[24px] leading-tight">No deployment found</h1>
+      <p className="mt-2 text-[14px] text-muted">{(error as Error)?.message ?? 'Start the devnet with ops/devnet.sh, then retry.'}</p>
+      <Button className="mt-5" onClick={() => refetch()}>
         Retry
-      </button>
+      </Button>
     </div>
   )
 }

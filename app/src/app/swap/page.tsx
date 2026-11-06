@@ -54,6 +54,15 @@ export default function SwapPage() {
     return client.quoteExactIn(withoutMaker(market.data, me), tIn.address, tOut.address, amount)
   }, [market.data, amount, tokenIn, tokenOut, client, tIn.address, tOut.address, me])
 
+  const stale = market.data ? tokens.filter((t) => priceOf(market.data, t)?.priceE18 == null).map((t) => t.symbol) : []
+  const onlyMine = !!market.data && market.data.ranges.length > 0 && withoutMaker(market.data, me).ranges.length === 0
+  const noRoute = stale.length
+    ? stale.length > 1
+      ? `The Chainlink rates for ${stale.join(', ')} are stale, so ranges with these coins pause until they update.`
+      : `The Chainlink rate for ${stale[0]} is stale, so ranges with it pause until it updates.`
+    : onlyMine
+      ? 'Every live range belongs to this wallet, and swaps skip your own strategies. Connect another wallet.'
+      : null
   const marketIn = inHalted ? pIn?.depegE18 : pIn?.priceE18
   const usdIn = amount ? usd(amount, tIn.decimals, marketIn) : null
   const usdOut = quote ? usd(quote.amountOut, tOut.decimals, pOut?.priceE18) : null
@@ -81,7 +90,7 @@ export default function SwapPage() {
   else if (balanceIn !== undefined && amount > balanceIn) [cta, blocked] = [`Not enough ${tIn.symbol}`, true]
   else if (inHalted && (!quote || quote.legs.length === 0)) [cta, blocked] = [`No backstop is buying ${tIn.symbol}`, true]
   else if (quote && quote.legs.length > 0 && quote.filled < quote.amountIn) [cta, blocked] = ['Not enough liquidity', true]
-  else if (!quote || quote.legs.length === 0) [cta, blocked] = ['No route', true]
+  else if (!quote || quote.legs.length === 0) [cta, blocked] = [stale.length ? 'Chainlink rate is stale' : onlyMine ? 'No other wallet holds this pair' : 'No route', true]
   else if (inHalted) cta = `Sell ${tIn.symbol} to the backstops`
 
   const swap = () =>
@@ -133,7 +142,7 @@ export default function SwapPage() {
                 disabled={balanceIn === undefined}
                 onClick={() => balanceIn !== undefined && setText(formatAmount(balanceIn, tIn.decimals, 6).replace(/,/g, ''))}
               >
-                Balance <span className="num text-[12.5px] tracking-normal">{balanceIn === undefined ? '—' : formatAmount(balanceIn, tIn.decimals)}</span>
+                Balance <span className="num text-[12.5px] tracking-normal">{balanceIn === undefined ? '-' : formatAmount(balanceIn, tIn.decimals)}</span>
               </button>
             </div>
             <div className="mt-2 flex items-center gap-3">
@@ -177,11 +186,11 @@ export default function SwapPage() {
           </Field>
 
           <dl className="mt-5 divide-y divide-line">
-            <Row term="Rate">{rate ? `1 ${tIn.symbol} = ${formatRatio(rate)} ${tOut.symbol}` : '—'}</Row>
+            <Row term="Rate">{rate ? `1 ${tIn.symbol} = ${formatRatio(rate)} ${tOut.symbol}` : '-'}</Row>
             <Row term="Value vs Chainlink" tone={value !== null && value < -1 ? 'down' : undefined}>
-              {value === null ? '—' : formatPct(value, 3)}
+              {value === null ? '-' : formatPct(value, 3)}
             </Row>
-            <Row term="Minimum received">{quote ? `${formatAmount(minOut, tOut.decimals, 4)} ${tOut.symbol}` : '—'}</Row>
+            <Row term="Minimum received">{quote ? `${formatAmount(minOut, tOut.decimals, 4)} ${tOut.symbol}` : '-'}</Row>
           </dl>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -224,7 +233,9 @@ export default function SwapPage() {
                   ? `Nobody pays out ${tOut.symbol} while it is halted. Pick a healthy coin to receive.`
                   : inHalted
                     ? `No backstop has room for ${tIn.symbol} right now.`
-                    : 'Enter an amount to see how the trade splits.'}
+                    : amount && amount > 0n && tokenIn !== tokenOut && noRoute
+                      ? noRoute
+                      : 'Enter an amount to see how the trade splits.'}
               </p>
             ) : (
               <ul className="mt-4 space-y-3">
@@ -234,7 +245,7 @@ export default function SwapPage() {
                   return (
                     <li key={leg.id} className="rounded-xl border border-line bg-paper p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-[12px] font-medium tracking-[0.04em]">{s ? shortAddress(s.maker) : '—'}</span>
+                        <span className="text-[12px] font-medium tracking-[0.04em]">{s ? shortAddress(s.maker) : '-'}</span>
                         <span className="flex gap-1.5">
                           {s && <KindTag kind={s.kind} />}
                           {s && <VenueTag kind={s.venue.kind} />}
@@ -282,7 +293,7 @@ export default function SwapPage() {
                       <span className="num ml-auto text-[14px]">
                         {market.isLoading ? '…' : formatRate(p?.halted ? p.depegE18 : p?.priceE18, p?.fx ? 5 : 4)}
                       </span>
-                      <StatusTag halted={p?.halted ?? false} />
+                      <StatusTag halted={p?.halted ?? false} stale={!!market.data && p?.priceE18 == null} />
                     </button>
                   </li>
                 )

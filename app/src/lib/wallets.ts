@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { Chain } from 'viem'
 
 export interface Eip1193 {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>
@@ -70,4 +71,36 @@ export function walletError(e: unknown, wallet: string, chainName: string): stri
   if (err.code === -32002) return `${wallet} already has a request open. Open the extension to finish it.`
   if (err.code === 4902 || /chain|network/i.test(err.message ?? '')) return `${wallet} could not switch to ${chainName}. Switch the network in the wallet, then connect again.`
   return err.shortMessage ?? err.message ?? `Could not connect to ${wallet}.`
+}
+
+export async function switchChain(p: Eip1193, chain: Chain) {
+  const chainId = `0x${chain.id.toString(16)}`
+  try {
+    await p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId }] })
+  } catch (e) {
+    if ((e as { code?: number }).code !== 4902) throw e
+    const explorer = chain.blockExplorers?.default.url
+    await p.request({
+      method: 'wallet_addEthereumChain',
+      params: [
+        {
+          chainId,
+          chainName: chain.name,
+          nativeCurrency: chain.nativeCurrency,
+          rpcUrls: chain.rpcUrls.default.http,
+          blockExplorerUrls: explorer ? [explorer] : undefined,
+        },
+      ],
+    })
+  }
+}
+
+export function onChain(p: Eip1193, chain: Chain): Eip1193 {
+  return {
+    request: async (args) => {
+      if (args.method !== 'eth_chainId') return p.request(args)
+      if (Number(await p.request(args)) !== chain.id) await switchChain(p, chain)
+      return `0x${chain.id.toString(16)}`
+    },
+  }
 }
