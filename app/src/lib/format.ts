@@ -18,11 +18,6 @@ export function formatPct(value: number, fraction = 2): string {
   return `${sign}${value.toFixed(fraction)}%`
 }
 
-export function formatPrice(e8: bigint | number | null | undefined): string {
-  if (e8 === null || e8 === undefined) return '—'
-  return `$${(Number(e8) / 1e8).toFixed(4)}`
-}
-
 export function formatRate(e18: bigint | null | undefined, digits = 4): string {
   if (e18 === null || e18 === undefined) return '—'
   const v = Number(e18) / 1e18

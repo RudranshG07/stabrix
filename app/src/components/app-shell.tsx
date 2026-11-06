@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
-import { RequireDeployment, useMaybeStabrix, useSentinel, useStabrix } from '@/lib/stabrix'
+import { RequireDeployment, useMaybeStabrix, useOracleStatus, useStabrix } from '@/lib/stabrix'
 import { AccountMenu } from './account-menu'
 
 const NAV = [
@@ -24,8 +24,8 @@ export function AnchorMark({ className = 'h-[26px] w-[22px]' }: { className?: st
 
 function NetworkPill() {
   const { chain } = useStabrix()
-  const sentinel = useSentinel()
-  const halted = sentinel.data?.filter((s) => s.halted).length ?? 0
+  const oracle = useOracleStatus()
+  const halted = oracle.data?.filter((s) => s.halted).length ?? 0
   return (
     <div className="hidden min-h-10 items-center gap-2 rounded-full border-2 border-surface-line bg-surface px-3.5 text-[10.5px] font-bold tracking-[0.12em] uppercase lg:flex">
       <span className={`size-2 rounded-full ${halted ? 'bg-down' : 'bg-up'}`} aria-hidden />

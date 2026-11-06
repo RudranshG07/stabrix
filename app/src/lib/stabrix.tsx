@@ -184,9 +184,9 @@ export function useMarket() {
   return useQuery({ queryKey: ['market'], queryFn: () => client.market(), refetchInterval: POLL_MS })
 }
 
-export function useSentinel() {
+export function useOracleStatus() {
   const { client } = useStabrix()
-  return useQuery({ queryKey: ['sentinel'], queryFn: () => client.oracleStatus(), refetchInterval: POLL_MS })
+  return useQuery({ queryKey: ['oracle-status'], queryFn: () => client.oracleStatus(), refetchInterval: POLL_MS })
 }
 
 export function useBalances(owner: Address | undefined) {
@@ -255,6 +255,11 @@ export async function setApiPrice(symbol: string, price: number) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ symbol, price }),
   })
+  if (!res.ok) throw new Error('price api rejected the update')
+}
+
+export async function clearApiPrice(symbol: string) {
+  const res = await fetch(`${PRICE_API}/price/${symbol}`, { method: 'DELETE' })
   if (!res.ok) throw new Error('price api rejected the update')
 }
 
