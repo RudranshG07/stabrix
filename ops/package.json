@@ -10,7 +10,8 @@
     "cre-config": "tsx src/cre-config.ts",
     "typecheck": "tsc --noEmit",
     "inspect": "tsx src/inspect.ts",
-    "seed:testnet": "tsx src/seed-testnet.ts"
+    "seed:testnet": "tsx src/seed-testnet.ts",
+    "seed:mainnet": "tsx src/seed-mainnet.ts"
   },
   "dependencies": {
     "@stabrix/sdk": "0.1.0",
