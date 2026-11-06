@@ -9,7 +9,7 @@ import {StabrixPricing} from "../src/StabrixPricing.sol";
 import {StabrixExtruction} from "../src/StabrixExtruction.sol";
 import {StabrixBatchTaker} from "../src/StabrixBatchTaker.sol";
 import {StabrixMath} from "../src/StabrixMath.sol";
-import {DepegSentinel} from "../src/DepegSentinel.sol";
+import {StabrixOracle} from "../src/StabrixOracle.sol";
 import {MockStablecoin} from "../src/mocks/MockStablecoin.sol";
 
 contract StabrixRouterTest is StabrixFixture {
@@ -81,71 +81,71 @@ contract StabrixRouterTest is StabrixFixture {
         router.swap(order, tokens[0], tokens[1], unit(0), takerData(true, trader));
     }
 
-    function test_SentinelHaltBlocksInflowOnly() public {
+    function test_OracleHaltBlocksInflowOnly() public {
         (ISwapVM.Order memory order,) = ship(lp, config(1, 10_000, true), 100, 1);
-        sentinel.guardianSet(tokens[4], true);
+        oracle.guardianSet(tokens[4], true);
 
         fund(trader, 4, unit(4), address(router));
         vm.prank(trader);
-        vm.expectRevert(abi.encodeWithSelector(StabrixPricing.Halted.selector, tokens[4]));
+        vm.expectRevert(abi.encodeWithSelector(StabrixOracle.Halted.selector, tokens[4]));
         router.swap(order, tokens[4], tokens[0], unit(4), takerData(true, trader));
 
         uint256 out = swapIn(order, 0, 4, unit(0));
         assertGt(out, 0);
     }
 
-    function test_SentinelReportFromForwarder() public {
+    function test_OracleReportFromForwarder() public {
         (ISwapVM.Order memory order,) = ship(lp, config(1, 10_000, true), 100, 1);
         address[] memory t = new address[](1);
-        int256[] memory p = new int256[](1);
+        uint256[] memory p = new uint256[](1);
         bool[] memory hlt = new bool[](1);
         t[0] = tokens[2];
-        p[0] = 0.91e8;
+        p[0] = 0.91e18;
         hlt[0] = true;
         bytes memory report = abi.encode(t, p, hlt, uint64(block.timestamp));
 
-        vm.expectRevert(abi.encodeWithSelector(DepegSentinel.UnauthorizedForwarder.selector, address(this)));
-        sentinel.onReport("", report);
+        vm.expectRevert(abi.encodeWithSelector(StabrixOracle.UnauthorizedForwarder.selector, address(this)));
+        oracle.onReport("", report);
 
         vm.prank(forwarder);
-        sentinel.onReport("", report);
-        assertTrue(sentinel.isHalted(tokens[2]));
+        oracle.onReport("", report);
+        assertTrue(oracle.isHalted(tokens[2]));
 
         hlt[0] = false;
         vm.prank(forwarder);
-        sentinel.onReport("", abi.encode(t, p, hlt, uint64(block.timestamp)));
-        assertTrue(sentinel.isHalted(tokens[2]), "stale report ignored");
+        oracle.onReport("", abi.encode(t, p, hlt, uint64(block.timestamp)));
+        assertTrue(oracle.isHalted(tokens[2]), "stale report ignored");
 
         fund(trader, 2, unit(2), address(router));
         vm.prank(trader);
-        vm.expectRevert(abi.encodeWithSelector(StabrixPricing.Halted.selector, tokens[2]));
+        vm.expectRevert(abi.encodeWithSelector(StabrixOracle.Halted.selector, tokens[2]));
         router.swap(order, tokens[2], tokens[0], unit(2), takerData(true, trader));
     }
 
-    function test_SentinelWorkflowOwnerCheck() public {
+    function test_OracleWorkflowOwnerCheck() public {
         address owner_ = makeAddr("workflowOwner");
-        sentinel.setWorkflowOwner(owner_);
+        oracle.setWorkflowOwner(owner_);
         address[] memory t = new address[](1);
-        int256[] memory p = new int256[](1);
+        uint256[] memory p = new uint256[](1);
         bool[] memory hlt = new bool[](1);
         t[0] = tokens[0];
-        p[0] = 1e8;
+        p[0] = 1e18;
         bytes memory report = abi.encode(t, p, hlt, uint64(1));
 
         bytes memory wrong = abi.encodePacked(bytes32(0), bytes10(0), makeAddr("intruder"));
         vm.prank(forwarder);
         vm.expectRevert();
-        sentinel.onReport(wrong, report);
+        oracle.onReport(wrong, report);
 
         vm.prank(forwarder);
-        sentinel.onReport(abi.encodePacked(bytes32(0), bytes10(0), owner_), report);
-        (, int192 price,) = sentinel.status(tokens[0]);
-        assertEq(price, 1e8);
+        oracle.onReport(abi.encodePacked(bytes32(0), bytes10(0), owner_), report);
+        (,, uint128 price) = oracle.status(tokens[0]);
+        assertEq(price, 1e18);
     }
 
     function test_SupportsReceiverInterface() public view {
-        assertTrue(sentinel.supportsInterface(0x805f2132));
-        assertTrue(sentinel.supportsInterface(0x01ffc9a7));
+        assertTrue(oracle.supportsInterface(0x805f2132));
+        assertTrue(oracle.supportsInterface(0x01ffc9a7));
     }
 
     function test_BatchAcrossRangesBeatsSingleRange() public {

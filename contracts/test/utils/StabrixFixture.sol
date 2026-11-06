@@ -10,18 +10,20 @@ import {StabrixRouter} from "../../src/StabrixRouter.sol";
 import {StabrixLens} from "../../src/StabrixLens.sol";
 import {StabrixConfig} from "../../src/StabrixConfig.sol";
 import {StabrixBatchTaker} from "../../src/StabrixBatchTaker.sol";
-import {DepegSentinel} from "../../src/DepegSentinel.sol";
+import {StabrixExtruction} from "../../src/StabrixExtruction.sol";
+import {StabrixOracle} from "../../src/StabrixOracle.sol";
 import {MockStablecoin} from "../../src/mocks/MockStablecoin.sol";
 
 abstract contract StabrixFixture is Test {
-    uint256 internal constant N = 5;
+    uint256 internal N;
     uint256 internal constant W = 1e18;
 
     Aqua internal aqua;
     StabrixRouter internal router;
     StabrixLens internal lens;
     StabrixBatchTaker internal batch;
-    DepegSentinel internal sentinel;
+    StabrixExtruction internal pricer;
+    StabrixOracle internal oracle;
 
     address[] internal tokens;
     uint8[] internal decimals;
@@ -33,13 +35,14 @@ abstract contract StabrixFixture is Test {
 
     function setUp() public virtual {
         aqua = new Aqua();
-        router = new StabrixRouter(address(aqua), address(0), address(this));
+        pricer = new StabrixExtruction(address(aqua));
+        router = new StabrixRouter(address(aqua), address(0), address(this), address(pricer));
         lens = new StabrixLens(address(aqua));
         batch = new StabrixBatchTaker();
-        sentinel = new DepegSentinel(forwarder, address(this));
+        oracle = new StabrixOracle(forwarder, address(this), 900, 50);
 
-        string[5] memory symbols = ["USDC", "USDT", "DAI", "PYUSD", "USDS"];
-        uint8[5] memory decs = [6, 6, 18, 6, 18];
+        (string[] memory symbols, uint8[] memory decs) = specs();
+        N = symbols.length;
         address[] memory raw = new address[](N);
         for (uint256 k; k < N; ++k) {
             raw[k] = address(new MockStablecoin(symbols[k], symbols[k], decs[k]));
@@ -56,11 +59,18 @@ abstract contract StabrixFixture is Test {
         }
     }
 
+    function specs() internal pure virtual returns (string[] memory symbols, uint8[] memory decs) {
+        symbols = new string[](5);
+        decs = new uint8[](5);
+        (symbols[0], symbols[1], symbols[2], symbols[3], symbols[4]) = ("USDC", "USDT", "DAI", "PYUSD", "USDS");
+        (decs[0], decs[1], decs[2], decs[3], decs[4]) = (6, 6, 18, 6, 18);
+    }
+
     function unit(uint256 k) internal view returns (uint256) {
         return 10 ** decimals[k];
     }
 
-    function config(uint16 feeBps, uint16 maxShareBps, bool withSentinel)
+    function config(uint16 feeBps, uint16 maxShareBps, bool withOracle)
         internal
         view
         returns (StabrixConfig.Config memory c)
@@ -70,8 +80,9 @@ abstract contract StabrixFixture is Test {
         c.floor = uint128(900 * W);
         c.sumCapRatio = uint64(2.79e18);
         c.feeBps = feeBps;
+        c.fxFeeBps = feeBps;
         c.maxShareBps = maxShareBps;
-        c.sentinel = withSentinel ? address(sentinel) : address(0);
+        c.oracle = withOracle ? address(oracle) : address(0);
     }
 
     function ship(address maker, StabrixConfig.Config memory c, uint256 perToken, uint64 salt)
