@@ -11,10 +11,10 @@ interface IReceiver is IERC165 {
     function onReport(bytes calldata metadata, bytes calldata report) external;
 }
 
-/// @notice USD price per whole token for Stabrix ranges. Tokens without a feed are pegged at $1.
-/// FX tokens use the Chainlink CRE price when it is fresh and within maxDeviationBps of the Chainlink feed,
-/// otherwise the feed. A stale feed refuses the swap.
-/// Report: abi.encode(address[] tokens, uint256[] pricesE18, bool[] halted, uint64 observedAt)
+/// @notice USD prices for Stabrix. Tokens without a feed are pegged at $1. FX tokens use the CRE market price
+/// when it is fresh and within maxDeviationBps of their Chainlink feed, otherwise the feed; a stale feed refuses.
+/// A halted token has a depeg price for backstops: the lower of the fresh CRE price and its Chainlink market feed.
+/// Report: abi.encode(address[] tokens, uint256[] marketPricesE18, bool[] halted, uint64 observedAt)
 contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
     uint256 internal constant WAD = 1e18;
     uint256 internal constant BPS = 10_000;
@@ -38,11 +38,13 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
     uint16 public maxDeviationBps;
     mapping(address token => Status) public status;
     mapping(address token => Feed) public feeds;
+    mapping(address token => Feed) public marketFeeds;
 
     event ForwarderSet(address forwarder);
     event WorkflowOwnerSet(address workflowOwner);
     event LimitsSet(uint32 reportMaxAge, uint16 maxDeviationBps);
     event FeedSet(address indexed token, address feed, uint32 maxAge);
+    event MarketFeedSet(address indexed token, address feed, uint32 maxAge);
     event StatusUpdated(address indexed token, bool halted, uint256 priceE18, uint64 observedAt);
     event GuardianOverride(address indexed token, bool halted);
 
@@ -51,6 +53,7 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
     error MalformedReport();
     error FutureReport(uint64 observedAt);
     error Halted(address token);
+    error NotDepegged(address token);
     error StaleRate(address token);
     error BadFeed(address feed);
     error BadLimits();
@@ -89,6 +92,19 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
         halted = s.halted;
     }
 
+    function depegPrice(address token) external view returns (uint256 priceE18) {
+        Status memory s = status[token];
+        if (!s.halted) revert NotDepegged(token);
+        priceE18 = type(uint256).max;
+        if (s.priceE18 != 0 && block.timestamp <= uint256(s.observedAt) + reportMaxAge) priceE18 = s.priceE18;
+        Feed memory f = marketFeeds[token];
+        if (address(f.feed) != address(0)) {
+            (bool ok, uint256 feedPrice) = _read(f);
+            if (ok && feedPrice < priceE18) priceE18 = feedPrice;
+        }
+        if (priceE18 == type(uint256).max) revert StaleRate(token);
+    }
+
     function isHalted(address token) external view returns (bool) {
         return status[token].halted;
     }
@@ -118,13 +134,13 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
     }
 
     function setFeed(address token, address feed, uint32 maxAge) external onlyOwner {
-        uint8 dec;
-        if (feed != address(0)) {
-            dec = IAggregatorV3(feed).decimals();
-            if (dec > 18 || maxAge == 0) revert BadFeed(feed);
-        }
-        feeds[token] = Feed(IAggregatorV3(feed), maxAge, dec);
+        feeds[token] = _feed(feed, maxAge);
         emit FeedSet(token, feed, maxAge);
+    }
+
+    function setMarketFeed(address token, address feed, uint32 maxAge) external onlyOwner {
+        marketFeeds[token] = _feed(feed, maxAge);
+        emit MarketFeedSet(token, feed, maxAge);
     }
 
     function setForwarder(address forwarder_) external onlyOwner {
@@ -157,12 +173,22 @@ contract StabrixOracle is IStabrixOracle, IReceiver, Ownable {
         emit LimitsSet(reportMaxAge_, maxDeviationBps_);
     }
 
-    function _fxPrice(address token, Feed memory f, Status memory s) internal view returns (uint256) {
+    function _feed(address feed, uint32 maxAge) internal view returns (Feed memory f) {
+        if (feed == address(0)) return f;
+        uint8 dec = IAggregatorV3(feed).decimals();
+        if (dec > 18 || maxAge == 0) revert BadFeed(feed);
+        f = Feed(IAggregatorV3(feed), maxAge, dec);
+    }
+
+    function _read(Feed memory f) internal view returns (bool ok, uint256 priceE18) {
         (, int256 answer,, uint256 updatedAt,) = f.feed.latestRoundData();
-        if (answer <= 0 || updatedAt > block.timestamp || block.timestamp - updatedAt > f.maxAge) {
-            revert StaleRate(token);
-        }
-        uint256 ref = uint256(answer) * 10 ** (18 - f.decimals);
+        ok = answer > 0 && updatedAt <= block.timestamp && block.timestamp - updatedAt <= f.maxAge;
+        if (ok) priceE18 = uint256(answer) * 10 ** (18 - f.decimals);
+    }
+
+    function _fxPrice(address token, Feed memory f, Status memory s) internal view returns (uint256) {
+        (bool ok, uint256 ref) = _read(f);
+        if (!ok) revert StaleRate(token);
         if (s.priceE18 == 0 || block.timestamp > uint256(s.observedAt) + reportMaxAge) return ref;
         uint256 diff = s.priceE18 > ref ? s.priceE18 - ref : ref - s.priceE18;
         return diff * BPS > ref * maxDeviationBps ? ref : s.priceE18;

@@ -6,4 +6,8 @@ interface IStabrixOracle {
         external
         view
         returns (uint256[] memory pricesE18, uint256 fxMask);
+
+    function priceOf(address token) external view returns (uint256 priceE18, bool fx, bool halted);
+
+    function depegPrice(address token) external view returns (uint256 priceE18);
 }
