@@ -5,6 +5,7 @@ contracts/broadcast/
 .env
 .env.*
 !.env.example
+!.env.public
 .DS_Store
 .next/
 dist/
