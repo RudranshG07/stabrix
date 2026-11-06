@@ -39,6 +39,8 @@ contract Deploy is Script {
         bool official = AQUA.code.length > 0 && OFFICIAL_ROUTER.code.length > 0;
         address forwarder = vm.envOr("CRE_FORWARDER", BASE_CRE_FORWARDER);
         address workflowOwner = vm.envOr("CRE_WORKFLOW_OWNER", address(0));
+        uint32 feedMaxAge = uint32(vm.envOr("FEED_MAX_AGE", uint256(FEED_MAX_AGE)));
+        uint32 marketFeedMaxAge = uint32(vm.envOr("MARKET_FEED_MAX_AGE", uint256(MARKET_FEED_MAX_AGE)));
 
         Coin[] memory coins = block.chainid == 8453 ? _baseCoins() : new Coin[](0);
 
@@ -56,9 +58,9 @@ contract Deploy is Script {
         if (workflowOwner != address(0)) oracle.setWorkflowOwner(workflowOwner);
         if (coins.length == 0) coins = _mockCoins();
         for (uint256 k; k < coins.length; ++k) {
-            if (coins[k].feed != address(0)) oracle.setFeed(coins[k].token, coins[k].feed, FEED_MAX_AGE);
+            if (coins[k].feed != address(0)) oracle.setFeed(coins[k].token, coins[k].feed, feedMaxAge);
             if (coins[k].marketFeed != address(0)) {
-                oracle.setMarketFeed(coins[k].token, coins[k].marketFeed, MARKET_FEED_MAX_AGE);
+                oracle.setMarketFeed(coins[k].token, coins[k].marketFeed, marketFeedMaxAge);
             }
         }
         vm.stopBroadcast();

@@ -90,6 +90,18 @@ describe('splitExactIn', () => {
     }
   })
 
+  it('two strategies of one wallet never pay out more than that wallet holds', () => {
+    const amount = 40n * 10n ** 6n
+    const free = splitExactIn([state('a', per(100n), range), state('b', per(100n), range)], 'a', 'b', amount)
+    const budget = (free.amountOut * 6n) / 10n
+    const owned = (id: string) => ({ ...state(id, per(100n), range), wallet: { owner: '0xLP', spendable: () => budget } })
+    const plan = splitExactIn([owned('a'), owned('b')], 'a', 'b', amount)
+    expect(plan.amountOut).toBeLessThanOrEqual(budget)
+    expect(plan.filled).toBeLessThan(amount)
+    const other = { ...state('c', per(100n), range), wallet: { owner: '0xOther', spendable: () => budget } }
+    expect(splitExactIn([owned('a'), other], 'a', 'b', amount).filled).toBe(amount)
+  })
+
   it('reports partial fills instead of failing', () => {
     const a = state('a', per(100n), range)
     const plan = splitExactIn([a], 'a', 'b', 10_000n * 10n ** 6n)

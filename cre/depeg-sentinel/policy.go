@@ -113,6 +113,7 @@ func positive(v *big.Int) bool { return v != nil && v.Sign() > 0 }
 
 // Decide halts on offchain data only when every API configured for the coin answered and even the least alarming
 // quote is past the limit, so one stale or missing API cannot halt a healthy coin; the Chainlink feed can halt alone.
+// A halt lifts only when every source that answered is back inside the resume band, so one lagging API cannot lift it.
 // A healthy coin is reported at the quote closest to its reference, so one lagging API cannot misprice ranges, and a
 // halted coin at the lowest market price, which is the safe side for backstop makers. A halted coin with no market
 // data is not reported, so its onchain price ages out instead of being refreshed with the reference rate.
@@ -136,16 +137,17 @@ func Decide(cfg *Config, o Observation, now int64) Decision {
 		return Decision{Halt: true, Reason: "no market data while halted"}
 	}
 
-	var feedDev, apiDev int64
+	var feedDev, apiDev, apiWorst int64
 	if feedOk {
 		feedDev = deviationBps(o.Feed, ref)
 	}
 	if apiOk {
 		apiDev = deviationBps(quotes[0], ref)
+		apiWorst = apiDev
 		for _, q := range quotes[1:] {
-			if dev := deviationBps(q, ref); dev < apiDev {
-				apiDev = dev
-			}
+			dev := deviationBps(q, ref)
+			apiDev = min(apiDev, dev)
+			apiWorst = max(apiWorst, dev)
 		}
 	}
 
@@ -158,7 +160,7 @@ func Decide(cfg *Config, o Observation, now int64) Decision {
 	case apiAll && feedOk && apiDev >= cfg.SoftBps && feedDev >= cfg.SoftBps:
 		d.Halt, d.Reason = true, fmt.Sprintf("both sources >= soft %dbps", cfg.SoftBps)
 	case o.Halted:
-		calm := (!apiOk || apiDev <= cfg.ResumeBps) && (!feedOk || feedDev <= cfg.ResumeBps)
+		calm := (!apiOk || apiWorst <= cfg.ResumeBps) && (!feedOk || feedDev <= cfg.ResumeBps)
 		d.Halt = !calm
 		if calm {
 			d.Reason = "back within resume band"

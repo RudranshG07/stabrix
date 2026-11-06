@@ -321,6 +321,9 @@ func TestDecideOffchainHaltNeedsEveryApi(t *testing.T) {
 		{"soft path with every api", Observation{Pegged: true, Feed: e18(0.992), Api: a(0.991, 0.99), ApiExpected: 2}, true},
 		{"halted coin resumes on the apis that answer", Observation{Pegged: true, Feed: e18(0.9995), Api: []*big.Int{e18(0.9992)}, ApiExpected: 2, Halted: true}, false},
 		{"halted coin holds while an answering api is still off", Observation{Pegged: true, Feed: e18(0.9995), Api: []*big.Int{e18(0.95)}, ApiExpected: 2, Halted: true}, true},
+		{"one lagging api cannot lift a halt", Observation{Pegged: true, Api: a(0.93, 1.0), ApiExpected: 2, Halted: true}, true},
+		{"fx coin without a market feed holds on one alarming api", Observation{Ref: e18(0.182), Api: a(0.17, 0.182), ApiExpected: 2, Halted: true}, true},
+		{"halted coin resumes when every api is calm", Observation{Pegged: true, Api: a(0.9995, 0.9998), ApiExpected: 2, Halted: true}, false},
 		{"fx coin needs both apis too", Observation{Ref: e18(1.12), Feed: e18(1.119), Api: []*big.Int{e18(1.04)}, ApiExpected: 2}, false},
 	}
 	for _, c := range cases {

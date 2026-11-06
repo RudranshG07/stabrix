@@ -7,6 +7,7 @@ export interface RangeState {
   range: Range
   indexOf: (token: string) => number
   quote?: (i: number, j: number, amountIn: bigint) => bigint
+  wallet?: { owner: string; spendable: (j: number) => bigint }
 }
 
 export interface Leg {
@@ -30,6 +31,17 @@ function outFor(s: RangeState, i: number, j: number, amount: bigint): bigint | n
     if (e instanceof StabrixMathError) return null
     throw e
   }
+}
+
+function walletCovers(usable: { s: RangeState; j: number }[], outs: bigint[], k: number, out: bigint): boolean {
+  const { s, j } = usable[k]!
+  if (!s.wallet) return true
+  const owner = s.wallet.owner.toLowerCase()
+  let paid = out
+  for (let m = 0; m < usable.length; m++) {
+    if (m !== k && usable[m]!.s.wallet?.owner.toLowerCase() === owner) paid += outs[m]!
+  }
+  return paid <= s.wallet.spendable(j)
 }
 
 export function splitExactIn(
@@ -59,7 +71,7 @@ export function splitExactIn(
     for (let k = 0; k < usable.length; k++) {
       const { s, i, j } = usable[k]!
       const out = outFor(s, i, j, alloc[k]! + chunk)
-      if (out === null) continue
+      if (out === null || !walletCovers(usable, outs, k, out)) continue
       const gain = out - outs[k]!
       if (gain > bestGain) {
         best = k

@@ -334,6 +334,7 @@ export class StabrixClient {
         if (out > r.spendable[j]!) throw new StabrixMathError('InsufficientReserve')
         return out
       },
+      wallet: { owner: r.maker, spendable: (j) => r.spendable[j]! },
     }
   }
 
@@ -365,6 +366,7 @@ export class StabrixClient {
         if (out > b.balances[j]! || out > b.spendable[j]!) throw new StabrixMathError('InsufficientReserve')
         return out
       },
+      wallet: { owner: b.maker, spendable: (j) => b.spendable[j]! },
     }
   }
 

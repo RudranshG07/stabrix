@@ -8,8 +8,8 @@
   "resumeBps": 25,
   "pushBps": 2,
   "heartbeatSec": 600,
-  "refMaxAgeSec": 4500,
-  "marketMaxAgeSec": 90000,
+  "refMaxAgeSec": 2592000,
+  "marketMaxAgeSec": 2592000,
   "feedDecimals": 8,
   "gasLimit": 600000,
   "apiUrls": [

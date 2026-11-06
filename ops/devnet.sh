@@ -9,6 +9,8 @@ DEPLOYER_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 CRE_SIM_FORWARDER="0x5E342a8438B4f5d39e72875FCee6f76B39CCE548"
 CRE_SIMULATION_OWNER="0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"
 export RPC_URL="$RPC" DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-base-fork}"
+# A fork freezes Chainlink feeds while block time follows the clock, so the fork oracle accepts 30 day old feeds.
+export FEED_MAX_AGE=2592000 MARKET_FEED_MAX_AGE=2592000
 
 anvil --fork-url "$UPSTREAM" --chain-id 8453 --port "$PORT" \
   --compute-units-per-second 150 --fork-retry-backoff 1500 --retries 12 --silent &
