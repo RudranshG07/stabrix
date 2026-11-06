@@ -11,14 +11,20 @@ export type TxState =
   | { status: 'error'; message: string }
 
 const FRIENDLY: Record<string, string> = {
-  Halted: 'This coin is halted by the depeg sentinel. Swaps into the pool are paused.',
+  Halted: 'Chainlink CRE has halted this coin. Ranges refuse it; only backstops buy it now.',
+  NotDepegged: 'This coin is healthy, so backstops are not buying it.',
+  PayoutHalted: 'A backstop never pays out in a halted coin. Pick a healthy coin to receive.',
+  BackstopFull: 'The backstops are full for this coin. Try a smaller amount.',
+  ExactInOnly: 'Backstops only take exact-input trades.',
+  StaleRate: 'A Chainlink rate is stale, so FX swaps pause until it updates.',
+  InsufficientLiquidity: 'A provider spent from their wallet. Quote again to route around them.',
   RangeEdge: 'Every range reached its edge for this trade. Try a smaller amount.',
   ExposureCap: 'The trade would exceed an LP exposure cap.',
   OutOfRange: 'The trade is larger than the available liquidity.',
   InsufficientReserve: 'Not enough liquidity for this trade.',
   InsufficientOutput: 'Price moved beyond your slippage limit. Quote again.',
   Expired: 'The quote expired. Quote again.',
-  StrategiesMustBeImmutable: 'This exact range already exists. Change the amount or preset.',
+  StrategiesMustBeImmutable: 'This exact strategy already exists. Change the amount or settings.',
 }
 
 export function explain(e: unknown): string {

@@ -23,6 +23,12 @@ export function formatPrice(e8: bigint | number | null | undefined): string {
   return `$${(Number(e8) / 1e8).toFixed(4)}`
 }
 
+export function formatRate(e18: bigint | null | undefined, digits = 4): string {
+  if (e18 === null || e18 === undefined) return '—'
+  const v = Number(e18) / 1e18
+  return `$${v < 0.01 ? v.toFixed(7) : v.toFixed(digits)}`
+}
+
 export const shortAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 
 export function toUnits(text: string, decimals: number): bigint | null {

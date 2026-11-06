@@ -18,7 +18,7 @@ import {
   http,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { ANVIL_ACCOUNTS, CHAINLINK_FEEDS, DEV_ACCOUNTS, POLL_MS, PRICE_API, RPC_URL } from './config'
+import { ANVIL_ACCOUNTS, DEV_ACCOUNTS, POLL_MS, PRICE_API, RPC_URL } from './config'
 
 export type Wallet = WalletClient<Transport, Chain, Account>
 
@@ -134,20 +134,20 @@ export function RequireDeployment({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="py-12" aria-busy="true">
-        <div className="h-10 w-64 animate-pulse rounded-lg bg-surface" />
-        <div className="mt-8 h-80 animate-pulse rounded-[20px] bg-surface" />
+        <div className="h-10 w-64 animate-pulse rounded-lg bg-surface-hover" />
+        <div className="mt-8 h-80 animate-pulse rounded-[26px] bg-surface-hover" />
       </div>
     )
   }
   return (
     <div className="max-w-xl py-12">
-      <p className="caption">// NOT CONNECTED</p>
-      <h1 className="title mt-3 text-3xl">No deployment found</h1>
+      <p className="font-display text-[17px] tracking-[0.2em] uppercase">Not connected</p>
+      <h1 className="title mt-3 text-[44px] leading-none">No deployment found</h1>
       <p className="mt-3 text-muted">{(error as Error)?.message ?? 'Start the devnet with ops/devnet.sh, then retry.'}</p>
       <button
         type="button"
         onClick={() => refetch()}
-        className="mt-6 min-h-11 rounded-full bg-accent px-6 text-[15px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
+        className="font-pill mt-6 min-h-12 rounded-full border-[3px] border-surface-line bg-ink px-7 pt-[3px] text-[15px] text-on-accent uppercase"
       >
         Retry
       </button>
@@ -222,12 +222,15 @@ export function useChainlinkPrices() {
     enabled: deployment.chainId === 8453,
     refetchInterval: POLL_MS * 4,
     queryFn: async () => {
-      const symbols = deployment.tokens.map((t) => t.symbol).filter((s) => CHAINLINK_FEEDS[s])
+      const zero = '0x0000000000000000000000000000000000000000'
+      const feeds = deployment.tokens
+        .map((t) => ({ symbol: t.symbol, feed: t.marketFeed !== zero ? t.marketFeed : t.feed }))
+        .filter((f) => f.feed !== zero)
       const results = await publicClient.multicall({
-        contracts: symbols.map((s) => ({ address: CHAINLINK_FEEDS[s]!, abi: feedAbi, functionName: 'latestRoundData' })),
+        contracts: feeds.map((f) => ({ address: f.feed, abi: feedAbi, functionName: 'latestRoundData' })),
       })
       return Object.fromEntries(
-        symbols.map((s, k) => [s, results[k]?.status === 'success' ? (results[k].result as readonly bigint[])[1]! : null]),
+        feeds.map((f, k) => [f.symbol, results[k]?.status === 'success' ? (results[k].result as readonly bigint[])[1]! : null]),
       ) as Record<string, bigint | null>
     },
   })
