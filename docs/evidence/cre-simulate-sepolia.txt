@@ -1,0 +1,40 @@
+Initializing...
+Loading settings...
+Checking RPC connectivity...
+Compiling workflow...
+✓ Workflow compiled
+✓ Simulation limits enabled
+  HTTP: req=120kb resp=250kb timeout=10s | ConfHTTP: req=125kb resp=500kb timeout=1m30s | Consensus obs=25kb | ChainWrite evm_report=50kb evm_gas=10000000 solana_report=265b solana_cu=300000 | WASM binary=100mb compressed=20mb
+  Binary hash: 507fc0abd24528b341b5d37a0a7c3b1f5ae0f3d08d07044adafdd2b47a1f4c8a
+  Config hash: 70d19076caf87ca63c22463a8970d30585cda3e16505f39a918eb97cd8b843fc
+2026-11-06T22:27:22Z [SIMULATION] Simulator Initialized
+
+2026-11-06T22:27:22Z [SIMULATION] Running trigger trigger=cron-trigger@1.0.0
+2026-11-06T22:27:23Z [USER LOG] msg=observed token=USDC ref=<nil> feed=<nil> api="[+999587263732713000 +999893483700000000]" price=999893483700000000 halt=false push=false reason="within peg"
+2026-11-06T22:27:23Z [USER LOG] msg=observed token=USDT ref=<nil> feed=<nil> api="[+999047348183773000 +999054288165269200]" price=999047348183773000 halt=false push=false reason="within peg"
+2026-11-06T22:27:23Z [USER LOG] msg=observed token=DAI ref=<nil> feed=<nil> api="[+1000102018120390600 +1000281588872610600]" price=1000102018120390600 halt=false push=false reason="within peg"
+2026-11-06T22:27:23Z [USER LOG] msg=observed token=USDS ref=<nil> feed=<nil> api="[+1000149370363369300 +1000149370363369300]" price=1000149370363369300 halt=false push=false reason="within peg"
+2026-11-06T22:27:23Z [USER LOG] msg=observed token=USDe ref=<nil> feed=<nil> api="[+998773423507172400 +998964678750000000]" price=998964678750000000 halt=false push=false reason="within peg"
+2026-11-06T22:27:23Z [USER LOG] msg=observed token=EURC ref=1114780000000000000 feed=<nil> api="[+1114486543047029000 +1115015992000000000]" price=1114486543047029000 halt=false push=true reason="within peg"
+2026-11-06T22:27:23Z [USER LOG] msg=observed token=BRZ ref=182004480000000000 feed=<nil> api="[+179978385114620200 +181806610000000000]" price=181806610000000000 halt=false push=true reason="within peg"
+2026-11-06T22:27:23Z [USER LOG] msg=observed token=IDRX ref=55220000000000 feed=<nil> api="[+55100034449083 +55099730645236]" price=55100034449083 halt=false push=true reason="within peg"
+2026-11-06T22:27:26Z [USER LOG] msg="oracle updated" pushed="[EURC:false BRZ:false IDRX:false]" tx=0x9b38b774b71255ec54cd13c0ba9a76d2d16f0699919890a8557e45ebf7697e77
+
+✓ Workflow Simulation Result:
+{
+  "Pushed": [
+    "EURC:false",
+    "BRZ:false",
+    "IDRX:false"
+  ],
+  "TxHash": "0x9b38b774b71255ec54cd13c0ba9a76d2d16f0699919890a8557e45ebf7697e77"
+}
+
+2026-11-06T22:27:26Z [SIMULATION] Execution finished signal received
+2026-11-06T22:27:26Z [SIMULATION] Skipping WorkflowEngineV2
+
+╭──────────────────────────────────────────────────────╮
+│ Simulation complete! Ready to deploy your workflow?  │
+│                                                      │
+│ Run cre account access to request deployment access. │
+╰──────────────────────────────────────────────────────╯

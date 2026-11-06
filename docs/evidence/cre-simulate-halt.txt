@@ -1,0 +1,38 @@
+Initializing...
+Loading settings...
+Checking RPC connectivity...
+Compiling workflow...
+✓ Workflow compiled
+✓ Simulation limits enabled
+  HTTP: req=120kb resp=250kb timeout=10s | ConfHTTP: req=125kb resp=500kb timeout=1m30s | Consensus obs=25kb | ChainWrite evm_report=50kb evm_gas=10000000 solana_report=265b solana_cu=300000 | WASM binary=100mb compressed=20mb
+  Binary hash: 507fc0abd24528b341b5d37a0a7c3b1f5ae0f3d08d07044adafdd2b47a1f4c8a
+  Config hash: 9c070963384bf65ab4ad66cf611566770bd031dc83c13e4cf574894a33713320
+2026-11-06T22:06:59Z [SIMULATION] Simulator Initialized
+
+2026-11-06T22:06:59Z [SIMULATION] Running trigger trigger=cron-trigger@1.0.0
+2026-11-06T22:06:59Z [USER LOG] msg=observed token=USDC ref=<nil> feed=999734800000000000 api=[<nil>] price=999734800000000000 halt=false push=false reason="within peg"
+2026-11-06T22:06:59Z [USER LOG] msg=observed token=USDT ref=<nil> feed=998655180000000000 api=[<nil>] price=998655180000000000 halt=false push=false reason="within peg"
+2026-11-06T22:06:59Z [USER LOG] msg=observed token=DAI ref=<nil> feed=999503590000000000 api=[<nil>] price=999503590000000000 halt=false push=false reason="within peg"
+2026-11-06T22:06:59Z [USER LOG] msg=observed token=USDS ref=<nil> feed=999774610000000000 api=[<nil>] price=999774610000000000 halt=false push=false reason="within peg"
+2026-11-06T22:06:59Z [USER LOG] msg=observed token=USDe ref=<nil> feed=998958000000000000 api=[+930000000000000000] price=930000000000000000 halt=true push=true reason="offchain 700bps >= hard 300bps"
+2026-11-06T22:06:59Z [USER LOG] msg=observed token=EURC ref=<nil> feed=1113714000000000000 api=[<nil>] price=<nil> halt=false push=false reason="no reference rate"
+2026-11-06T22:06:59Z [USER LOG] msg=observed token=BRZ ref=<nil> feed=<nil> api=[<nil>] price=<nil> halt=false push=false reason="no reference rate"
+2026-11-06T22:06:59Z [USER LOG] msg=observed token=IDRX ref=<nil> feed=<nil> api=[<nil>] price=<nil> halt=false push=false reason="no reference rate"
+2026-11-06T22:07:00Z [USER LOG] msg="oracle updated" pushed=[USDe:true] tx=0xa02345b16f06fcd17785d3554140e2e6fa23f67c0d44d9dad8007a81d3738cf7
+
+✓ Workflow Simulation Result:
+{
+  "Pushed": [
+    "USDe:true"
+  ],
+  "TxHash": "0xa02345b16f06fcd17785d3554140e2e6fa23f67c0d44d9dad8007a81d3738cf7"
+}
+
+2026-11-06T22:07:00Z [SIMULATION] Execution finished signal received
+2026-11-06T22:07:00Z [SIMULATION] Skipping WorkflowEngineV2
+
+╭──────────────────────────────────────────────────────╮
+│ Simulation complete! Ready to deploy your workflow?  │
+│                                                      │
+│ Run cre account access to request deployment access. │
+╰──────────────────────────────────────────────────────╯

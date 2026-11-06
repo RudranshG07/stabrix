@@ -60,6 +60,28 @@ The same balance backs both strategies, because Aqua only records allowances and
 | Consumer | `contracts/src/StabrixOracle.sol`: accepts reports only from the forwarder and the set workflow owner, uses a CRE rate only if fresh and within 0.5% of the Chainlink feed, refuses swaps on a stale feed, keeps guardian halts separate |
 | Simulation | Run against the fork and a Base Sepolia fork with `--broadcast`; the reports change prices and halts onchain |
 
+## Prize requirements, checked
+
+**1inch, Build an Aqua App**
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| Custom Aqua app with a sophisticated DeFi position | Done | FX ranges over up to 8 coins and peg backstops, shipped as Aqua strategies from one wallet (`contracts/src`, Liquidity page) |
+| Uses SwapVM, own instructions allowed | Done | Two new instructions, `StabrixTick` (34) and `StabrixBackstop` (35), in `contracts/src/StabrixRouter.sol` |
+| Positions shown through tests or a UI | Done | 80 Foundry tests and the Liquidity, Pool and Activity pages |
+| Official Aqua and SwapVM contracts (modified SwapVM redeploy allowed) | Done | Official Aqua `0x1111113C...a90a` and AquaSwapVMRouter `0x111111338c...C0De` on Base; our router is SwapVM v1.0.2 with two added instructions. `contracts/test/fork/BaseFork.t.sol` |
+| Onchain token transfers in the demo (local forks ok) | Done | Swaps, range and backstop fills on the Base fork through the app, quotes equal to the chain to the wei; a live swap on Base Sepolia, tx `0x550f...4bc6` |
+| Proper git history | Ongoing | Small commits per change; keep committing through the final day |
+
+**Chainlink, Best workflow with CRE**
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| CRE workflow used as the orchestration layer | Done | `cre/depeg-sentinel` sets FX rates and depeg halts that every swap reads through `StabrixOracle` |
+| Blockchain plus an external API or data source | Done | Base (Multicall3 reads of Chainlink feeds and oracle state, signed report writes) plus CoinGecko and DefiLlama with median consensus |
+| Successful simulation with the CRE CLI, or a live deployment | Done | `docs/evidence/cre-simulate-halt.txt` (USDe halted at $0.93, tx `0xa023...8cf7`) and `docs/evidence/cre-simulate-resume.txt` (resumed, tx `0xcd39...15a1ee`); and `docs/evidence/cre-simulate-sepolia.txt` on Base Sepolia itself (tx `0x9b38...7e77`) |
+| Meaningfully used | Done | Halted coins are refused by every range on both routers and only backstops buy them; FX swaps price at the CRE rate |
+
 ## Measured
 
 All on a Base mainnet fork with real tokens and both 1inch routers, unless noted.
@@ -113,7 +135,25 @@ npm run cre-config -- testnet
 cd ../cre && cre workflow simulate depeg-sentinel -T testnet-settings --broadcast --non-interactive --trigger-index 0
 ```
 
-This writes `deployments/84532.json`. `0xaAaA...aAaA` is the owner the CRE simulator reports as; a production deploy sets the real workflow owner instead. `sync-feeds` copies today's Base mainnet Chainlink EUR, BRL and IDR rates into the testnet feeds. With `--broadcast` the simulation sends a real transaction from `CRE_ETH_PRIVATE_KEY` in `cre/.env`, so on Base Sepolia that must be your own key with test ETH, never a public anvil key.
+This writes `deployments/84532.json`.
+
+### Live on Base Sepolia
+
+| Contract | Address |
+|---|---|
+| StabrixRouter | [0x0dBF59AeCD34c52516DDF4143fc827341E066074](https://sepolia.basescan.org/address/0x0dBF59AeCD34c52516DDF4143fc827341E066074) |
+| StabrixExtruction | [0xCB8c96CAAE6131b2B71b0E597B099c0891f608f9](https://sepolia.basescan.org/address/0xCB8c96CAAE6131b2B71b0E597B099c0891f608f9) |
+| StabrixBackstop | [0x2DE563f81ed933be470075e28d118c54e4271F24](https://sepolia.basescan.org/address/0x2DE563f81ed933be470075e28d118c54e4271F24) |
+| StabrixOracle | [0x9B60A21F729CC6138E89d84615c1c26b06f31354](https://sepolia.basescan.org/address/0x9B60A21F729CC6138E89d84615c1c26b06f31354) |
+| StabrixBatchTaker | [0xFD9a7555C958d471238Ac0DD11B077a0da1f5588](https://sepolia.basescan.org/address/0xFD9a7555C958d471238Ac0DD11B077a0da1f5588) |
+| StabrixLens | [0x2691368CcfF8AE2048DC17171fC98853f9De1Ff5](https://sepolia.basescan.org/address/0x2691368CcfF8AE2048DC17171fC98853f9De1Ff5) |
+| 1inch Aqua (unmodified source) | [0x9C1c395C0B1B15eF4DE0B618597b1e221b7E2128](https://sepolia.basescan.org/address/0x9C1c395C0B1B15eF4DE0B618597b1e221b7E2128) |
+| 1inch AquaSwapVMRouter (unmodified source) | [0xd7451569651a98870d8519Ae6eCbEA94024B6416](https://sepolia.basescan.org/address/0xd7451569651a98870d8519Ae6eCbEA94024B6416) |
+
+Seeded with three FX ranges (Tight and Balanced on the Stabrix router, Wide on the 1inch router) and one Standard backstop. A test swap of 1,000 USDC for 999.75 DAI: [0x550fba65...4bc6](https://sepolia.basescan.org/tx/0x550fba656dce936c1752d838825e23b9a85335b272238882ee6572e458844bc6). A real CRE CLI simulation wrote live CoinGecko and DefiLlama prices to the oracle: [0x9b38b774...7e77](https://sepolia.basescan.org/tx/0x9b38b774b71255ec54cd13c0ba9a76d2d16f0699919890a8557e45ebf7697e77), log in `docs/evidence/cre-simulate-sepolia.txt`.
+
+`https://sepolia.base.org` limits `eth_getLogs` to 200 blocks, which is too small for strategy discovery. Use `https://base-sepolia-rpc.publicnode.com` as `RPC_URL` for ops and `NEXT_PUBLIC_RPC_URL` for the app.
+ `0xaAaA...aAaA` is the owner the CRE simulator reports as; a production deploy sets the real workflow owner instead. `sync-feeds` copies today's Base mainnet Chainlink EUR, BRL and IDR rates into the testnet feeds. With `--broadcast` the simulation sends a real transaction from `CRE_ETH_PRIVATE_KEY` in `cre/.env`, so on Base Sepolia that must be your own key with test ETH, never a public anvil key.
 
 ## Hosting
 
