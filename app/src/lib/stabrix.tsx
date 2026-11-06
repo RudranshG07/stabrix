@@ -181,7 +181,7 @@ export function useRanges() {
 
 export function useSentinel() {
   const { client } = useStabrix()
-  return useQuery({ queryKey: ['sentinel'], queryFn: () => client.sentinelStatus(), refetchInterval: POLL_MS })
+  return useQuery({ queryKey: ['sentinel'], queryFn: () => client.oracleStatus(), refetchInterval: POLL_MS })
 }
 
 export function useBalances(owner: Address | undefined) {

@@ -39,11 +39,12 @@ export function loadDeployment(chainId: number): Deployment {
     officialRouter: getAddress(raw.officialRouter),
     extruction: getAddress(raw.extruction),
     batchTaker: getAddress(raw.batchTaker),
-    sentinel: getAddress(raw.sentinel),
+    oracle: getAddress(raw.oracle),
     lens: getAddress(raw.lens),
-    tokens: raw.tokens.map((t: { address: string; symbol: string; name: string; decimals: number }) => ({
+    tokens: raw.tokens.map((t: { address: string; symbol: string; name: string; decimals: number; feed: string }) => ({
       ...t,
       address: getAddress(t.address),
+      feed: getAddress(t.feed),
     })),
   }
 }

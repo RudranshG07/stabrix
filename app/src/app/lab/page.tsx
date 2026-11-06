@@ -1,6 +1,6 @@
 'use client'
 
-import { type LiveRange, depegSentinelAbi, stabrixBatchTakerAbi } from '@stabrix/sdk'
+import { type LiveRange, stabrixOracleAbi, stabrixBatchTakerAbi } from '@stabrix/sdk'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createWalletClient, http, parseEventLogs } from 'viem'
@@ -66,16 +66,16 @@ export default function LabPage() {
   }))
 
   const events = useQuery({
-    queryKey: ['lab-events', deployment.sentinel],
+    queryKey: ['lab-events', deployment.oracle],
     refetchInterval: POLL_MS,
     queryFn: async () => {
       const logs = await publicClient.getLogs({
-        address: [deployment.sentinel, deployment.batchTaker],
+        address: [deployment.oracle, deployment.batchTaker],
         fromBlock: deployment.fromBlock,
         toBlock: 'latest',
       })
       const parsed = [
-        ...parseEventLogs({ abi: depegSentinelAbi, logs, eventName: ['StatusUpdated', 'GuardianOverride'] }),
+        ...parseEventLogs({ abi: stabrixOracleAbi, logs, eventName: ['StatusUpdated', 'GuardianOverride'] }),
         ...parseEventLogs({ abi: stabrixBatchTakerAbi, logs, eventName: 'BatchSwapped' }),
       ]
       return parsed.sort((a, b) => Number(b.blockNumber - a.blockNumber) || b.logIndex - a.logIndex).slice(0, 14)
@@ -97,7 +97,7 @@ export default function LabPage() {
       for (let k = 0; stalled < targets.length && k < 60; k++) {
         const out = targets[k % targets.length]!
         const live = await client.listRanges()
-        const halted = new Set((await client.sentinelStatus()).filter((s) => s.halted).map((s) => s.token.toLowerCase()))
+        const halted = new Set((await client.oracleStatus()).filter((s) => s.halted).map((s) => s.token.toLowerCase()))
         const quote = client.quoteExactIn(live, coin.address, out.address, 2_000n * 10n ** BigInt(coin.decimals), halted)
         if (quote.legs.length === 0 || quote.filled === 0n) {
           stalled++
@@ -125,8 +125,8 @@ export default function LabPage() {
       const key = ANVIL_ACCOUNTS.find((a) => a.label === 'Guardian')!.key
       const g = createWalletClient({ chain, account: privateKeyToAccount(key), transport: http(RPC_URL) })
       const hash = await g.writeContract({
-        address: deployment.sentinel,
-        abi: depegSentinelAbi,
+        address: deployment.oracle,
+        abi: stabrixOracleAbi,
         functionName: 'guardianSet',
         args: [coin.address, halt],
       })
@@ -171,7 +171,7 @@ export default function LabPage() {
                 </div>
                 <div className="flex justify-between">
                   <dt className="opacity-70">SENTINEL</dt>
-                  <dd className="num">{s?.observedAt ? formatPrice(s.priceE8) : 'no report'}</dd>
+                  <dd className="num">{s?.observedAt ? formatPrice(s.reportedE18 / 10n ** 10n) : 'no report'}</dd>
                 </div>
               </dl>
             </button>
@@ -270,7 +270,7 @@ export default function LabPage() {
                             <span className={e.args.halted ? 'text-down' : 'text-up'}>
                               CRE: {symbols[e.args.token.toLowerCase()]} {e.args.halted ? 'halted' : 'live'}
                             </span>{' '}
-                            <span className="text-muted">at {formatPrice(e.args.priceE8)}</span>
+                            <span className="text-muted">at {formatPrice(e.args.priceE18 / 10n ** 10n)}</span>
                           </>
                         )}
                         {e.eventName === 'GuardianOverride' && (

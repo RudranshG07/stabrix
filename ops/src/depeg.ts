@@ -43,7 +43,7 @@ async function main() {
   for (let k = 0; stalled < targets.length; k++) {
     const out = targets[k % targets.length]!
     const ranges = await client.listRanges()
-    const halted = new Set((await client.sentinelStatus()).filter((s) => s.halted).map((s) => s.token.toLowerCase()))
+    const halted = new Set((await client.oracleStatus()).filter((s) => s.halted).map((s) => s.token.toLowerCase()))
     const quote = client.quoteExactIn(ranges, bad.address, out.address, CHUNK * 10n ** BigInt(bad.decimals), halted)
     if (quote.legs.length === 0 || quote.filled === 0n) {
       stalled++

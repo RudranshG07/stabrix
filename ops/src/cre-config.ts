@@ -17,7 +17,7 @@ const d = loadDeployment(8453)
 const base = {
   schedule: '*/30 * * * * *',
   chainName: 'ethereum-mainnet-base-1',
-  sentinel: d.sentinel,
+  sentinel: d.oracle,
   ...policy,
 }
 
@@ -46,4 +46,4 @@ const production = {
 const dir = join(ROOT, 'cre', 'depeg-sentinel')
 writeFileSync(join(dir, 'config.fork.json'), `${JSON.stringify(fork, null, 2)}\n`)
 writeFileSync(join(dir, 'config.production.json'), `${JSON.stringify(production, null, 2)}\n`)
-console.log(`wrote cre configs for sentinel ${d.sentinel}`)
+console.log(`wrote cre configs for oracle ${d.oracle}`)
