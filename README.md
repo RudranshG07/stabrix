@@ -94,7 +94,7 @@ Chainlink CRE on the fork (from `cre/`, after `cre login`, with `CRE_ETH_PRIVATE
 cre workflow simulate depeg-sentinel -T fork-settings --broadcast --non-interactive --trigger-index 0
 ```
 
-The Depeg page crashes a coin through the local price API, shows this command, and charts every strategy while the workflow halts the coin and backstops buy it.
+The app has five pages: Swap, Liquidity (open FX ranges and pledge backstops), Pool (reserve mix, liquidity by depeg tolerance, every strategy), Activity (swaps, strategies and CRE reports read from the chain) and Depeg. The Depeg page crashes a coin through the local price API, shows this command, and charts every strategy while the workflow halts the coin and backstops buy it.
 
 ## Base Sepolia
 
