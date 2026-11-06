@@ -51,7 +51,7 @@ function Nav({ path, className }: { path: string; className: string }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname()
   const ctx = useMaybeStabrix()
-  const landing = path === '/'
+  const landing = path === '/' || path === '/classic'
   if (landing) return <>{children}</>
   return (
     <>
