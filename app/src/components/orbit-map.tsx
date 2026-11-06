@@ -1,6 +1,7 @@
 'use client'
 
-import { type LiveRange, WAD, edgeUtilization, virtualBalances } from '@stabrix/sdk'
+import { type LiveRange, edgeUtilization, virtualBalances } from '@stabrix/sdk'
+import { presetOf } from '@/lib/strategy'
 import { COIN_HEX } from './ui'
 
 export const RANGE_COLORS = ['var(--color-violet)', 'var(--color-series-lime)', '#3fb8c9', '#e8857b', '#c9b37a']
@@ -10,12 +11,9 @@ const C = SIZE / 2
 const OUTER = 150
 
 export function ringRadius(r: LiveRange): number {
-  const perCoin = r.balances.length
-    ? r.balances.reduce((s, b, k) => s + Number(b) / 10 ** r.config.decimals[k]!, 0) / r.balances.length
-    : 1
-  const concentration = Number(r.config.floor / WAD) / Math.max(perCoin, 1e-9)
-  if (concentration > 20) return OUTER * 0.38
-  if (concentration > 5) return OUTER * 0.62
+  const preset = presetOf(r)
+  if (preset === 'tight') return OUTER * 0.38
+  if (preset === 'balanced') return OUTER * 0.62
   return OUTER * 0.86
 }
 
@@ -83,7 +81,7 @@ export function OrbitMap({ ranges, coins }: { ranges: LiveRange[]; coins: Coin[]
         })}
         <circle cx={C} cy={C} r={2.5} style={{ fill: 'var(--color-ink)' }} />
       </svg>
-      <figcaption className="caption mt-3 text-center">rings = range edges · dot = live reserves · center = every coin at $1</figcaption>
+      <figcaption className="caption mt-3 text-center">rings = range edges · dot = reserve mix · center = every coin at its Chainlink price</figcaption>
     </figure>
   )
 }

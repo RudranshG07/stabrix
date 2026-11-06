@@ -77,6 +77,14 @@
   font-feature-settings: 'lnum' 1, 'tnum' 1;
 }
 
+@utility amount {
+  font-size: clamp(22px, calc(230px / var(--len, 4)), 40px);
+  line-height: 1.25;
+  @media (width >= 40rem) {
+    font-size: 48px;
+  }
+}
+
 @utility ink-card {
   border: 3px solid var(--color-surface-line);
   border-radius: var(--radius-card);

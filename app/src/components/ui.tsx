@@ -46,9 +46,10 @@ export function Button({
   busy,
   children,
   variant = 'primary',
+  size = 'md',
   className = '',
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean; variant?: 'primary' | 'ghost' | 'danger' }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean; variant?: 'primary' | 'ghost' | 'danger'; size?: 'md' | 'sm' }) {
   const styles = {
     primary: 'bg-ink text-on-accent shadow-[0_6px_0_-1px_var(--color-paper),0_6px_0_2px_var(--color-surface-line)] hover:translate-y-[2px] hover:shadow-[0_4px_0_-1px_var(--color-paper),0_4px_0_2px_var(--color-surface-line)]',
     ghost: 'bg-surface text-ink shadow-[0_6px_0_-1px_var(--color-paper),0_6px_0_2px_var(--color-surface-line)] hover:translate-y-[2px] hover:shadow-[0_4px_0_-1px_var(--color-paper),0_4px_0_2px_var(--color-surface-line)]',
@@ -59,7 +60,9 @@ export function Button({
       type="button"
       {...rest}
       disabled={rest.disabled || busy}
-      className={`font-pill inline-flex min-h-12 items-center justify-center gap-2 rounded-full border-[3px] border-surface-line px-7 pt-[3px] text-[15px] tracking-[0.02em] whitespace-nowrap uppercase transition-[transform,box-shadow] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 ${styles} ${className}`}
+      className={`font-pill inline-flex items-center justify-center gap-2 rounded-full border-[3px] border-surface-line pt-[3px] tracking-[0.02em] whitespace-nowrap uppercase transition-[transform,box-shadow] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 ${
+        size === 'sm' ? 'min-h-10 px-5 text-[13px]' : 'min-h-12 px-7 text-[15px]'
+      } ${styles} ${className}`}
     >
       {busy && <Loader2 className="size-4 animate-spin" aria-hidden />}
       {children}
