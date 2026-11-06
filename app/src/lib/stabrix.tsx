@@ -39,6 +39,9 @@ interface StabrixContext {
 
 const Ctx = createContext<StabrixContext | null>(null)
 
+const CHAIN_NAMES: Record<number, string> = { 8453: 'Base', 84532: 'Base Sepolia' }
+const EXPLORERS: Record<number, string> = { 8453: 'https://basescan.org', 84532: 'https://sepolia.basescan.org' }
+
 interface RawDeployment extends Omit<Deployment, 'fromBlock'> {
   fromBlock: number | string
 }
@@ -66,7 +69,7 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
     () =>
       defineChain({
         id: deployment.chainId,
-        name: deployment.chainId === 8453 ? 'Base' : `Chain ${deployment.chainId}`,
+        name: CHAIN_NAMES[deployment.chainId] ?? `Chain ${deployment.chainId}`,
         nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
         rpcUrls: { default: { http: [RPC_URL] } },
         contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } },
@@ -108,9 +111,24 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
     if (!window.ethereum) throw new Error('No browser wallet found')
     const [address] = (await window.ethereum.request({ method: 'eth_requestAccounts' })) as string[]
     if (!address) throw new Error('No account selected')
-    await window.ethereum
-      .request({ method: 'wallet_switchEthereumChain', params: [{ chainId: `0x${chain.id.toString(16)}` }] })
-      .catch(() => undefined)
+    const chainId = `0x${chain.id.toString(16)}`
+    try {
+      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId }] })
+    } catch (e) {
+      if ((e as { code?: number }).code !== 4902) throw e
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+          {
+            chainId,
+            chainName: chain.name,
+            nativeCurrency: chain.nativeCurrency,
+            rpcUrls: [RPC_URL],
+            blockExplorerUrls: EXPLORERS[chain.id] ? [EXPLORERS[chain.id]] : undefined,
+          },
+        ],
+      })
+    }
     setSigner({ kind: 'injected', label: 'Browser wallet', address: getAddress(address) })
   }
 

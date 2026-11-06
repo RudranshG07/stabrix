@@ -3,6 +3,7 @@ import type { NextConfig } from 'next'
 
 const config: NextConfig = {
   reactStrictMode: true,
+  devIndicators: false,
   distDir: process.env.NEXT_DIST_DIR ?? '.next',
   outputFileTracingRoot: join(process.cwd(), '..'),
   outputFileTracingIncludes: { '/api/deployment': ['../deployments/*.json'] },

@@ -15,3 +15,4 @@ deployments/base-fork*.json
 *.tsbuildinfo
 next-env.d.ts
 .next-*/
+deployments/*-rehearsal.json
