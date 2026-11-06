@@ -11,7 +11,7 @@ import {
   maxUint256,
   parseEventLogs,
 } from 'viem'
-import { aquaAbi, depegSentinelAbi, stabrixBatchTakerAbi, stabrixRouterAbi } from './abi.js'
+import { aquaAbi, stabrixBatchTakerAbi, stabrixOracleAbi, stabrixRouterAbi } from './abi.js'
 import { type RangeConfig, ZERO_ADDRESS, ratesOf, toRange } from './config.js'
 import { type Range, rateFromDecimals, spotPrice } from './math.js'
 import { type Order, type Venue, buildOrder, decodeStrategy, encodeStrategy, parseProgram, strategyHash } from './order.js'
@@ -23,6 +23,7 @@ export interface TokenInfo {
   symbol: string
   name: string
   decimals: number
+  feed: Address
 }
 
 export interface Deployment {
@@ -33,7 +34,7 @@ export interface Deployment {
   officialRouter: Address
   extruction: Address
   batchTaker: Address
-  sentinel: Address
+  oracle: Address
   lens: Address
   tokens: TokenInfo[]
 }
@@ -58,11 +59,11 @@ export interface Quote extends SplitResult {
   ranges: LiveRange[]
 }
 
-export interface SentinelStatus {
+export interface OracleStatus {
   token: Address
   halted: boolean
-  priceE8: bigint
   observedAt: bigint
+  reportedE18: bigint
 }
 
 type Wallet = WalletClient<Transport, Chain, Account>
@@ -237,9 +238,10 @@ export class StabrixClient {
     return { hash, receipt, amountOut: ev?.args.amountOut ?? 0n }
   }
 
-  buildRange(preset: PresetId, depositPerCoin: bigint, maxShareBps = 10_000, sentinel = this.deployment.sentinel): RangeConfig {
+  buildRange(preset: PresetId, depositPerCoin: bigint, maxShareBps = 10_000, oracle = this.deployment.oracle): RangeConfig {
     const tokens = [...this.deployment.tokens].sort((a, b) => (BigInt(a.address) < BigInt(b.address) ? -1 : 1))
-    const designed = designRange(tokens.length, presetById(preset), maxShareBps)
+    const p = presetById(preset)
+    const designed = designRange(tokens.length, p, maxShareBps)
     const scaled = scaleRange(designed, depositPerCoin)
     return {
       tokens: tokens.map((t) => t.address),
@@ -247,8 +249,9 @@ export class StabrixClient {
       floor: scaled.floor,
       sumCapRatio: scaled.sumCapRatio,
       feeBps: scaled.feeBps,
+      fxFeeBps: p.fxFeeBps,
       maxShareBps: scaled.maxShareBps,
-      sentinel: sentinel ?? ZERO_ADDRESS,
+      oracle: oracle ?? ZERO_ADDRESS,
     }
   }
 
@@ -290,20 +293,20 @@ export class StabrixClient {
     return this.publicClient.waitForTransactionReceipt({ hash })
   }
 
-  async sentinelStatus(): Promise<SentinelStatus[]> {
+  async oracleStatus(): Promise<OracleStatus[]> {
     const tokens = this.deployment.tokens.map((t) => t.address)
     const results = await this.publicClient.multicall({
       contracts: tokens.map((t) => ({
-        address: this.deployment.sentinel,
-        abi: depegSentinelAbi,
+        address: this.deployment.oracle,
+        abi: stabrixOracleAbi,
         functionName: 'status',
         args: [t],
       })) as never,
       allowFailure: false,
     })
     return tokens.map((token, k) => {
-      const [halted, priceE8, observedAt] = results[k] as unknown as readonly [boolean, bigint, bigint]
-      return { token, halted, priceE8: BigInt(priceE8), observedAt: BigInt(observedAt) }
+      const [halted, observedAt, reportedE18] = results[k] as unknown as readonly [boolean, bigint, bigint]
+      return { token, halted, observedAt: BigInt(observedAt), reportedE18: BigInt(reportedE18) }
     })
   }
 

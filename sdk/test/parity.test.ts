@@ -53,8 +53,9 @@ const config: RangeConfig = {
   floor: 900n * 10n ** 18n,
   sumCapRatio: 279n * 10n ** 16n,
   feeBps: 4,
+  fxFeeBps: 12,
   maxShareBps: 3000,
-  sentinel: getAddress('0x9999999999999999999999999999999999999999'),
+  oracle: getAddress('0x9999999999999999999999999999999999999999'),
 }
 const maker = getAddress('0x00000000000000000000000000000000000A11CE')
 const extruction = getAddress('0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee')

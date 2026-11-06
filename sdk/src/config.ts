@@ -3,6 +3,7 @@ import { BPS, type Range, rateFromDecimals } from './math.js'
 
 export const MAX_TOKENS = 9
 export const MAX_FEE_BPS = 1000
+export const FIXED_BYTES = 50
 
 export interface RangeConfig {
   tokens: Address[]
@@ -10,8 +11,9 @@ export interface RangeConfig {
   floor: bigint
   sumCapRatio: bigint
   feeBps: number
+  fxFeeBps: number
   maxShareBps: number
-  sentinel: Address
+  oracle: Address
 }
 
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
@@ -23,7 +25,7 @@ export function sortTokens<T extends { address: Address }>(tokens: readonly T[])
 export function encodeConfig(c: RangeConfig): Hex {
   const n = c.tokens.length
   if (n < 2 || n > MAX_TOKENS || c.decimals.length !== n) throw new Error('bad token count')
-  if (c.feeBps > MAX_FEE_BPS) throw new Error('fee too high')
+  if (c.feeBps > MAX_FEE_BPS || c.fxFeeBps > MAX_FEE_BPS) throw new Error('fee too high')
   if (c.maxShareBps <= 0 || BigInt(c.maxShareBps) > BPS) throw new Error('bad max share')
   for (let k = 1; k < n; k++) {
     if (BigInt(c.tokens[k]!) <= BigInt(c.tokens[k - 1]!)) throw new Error('tokens must be sorted ascending')
@@ -36,14 +38,15 @@ export function encodeConfig(c: RangeConfig): Hex {
     numberToHex(c.floor, { size: 16 }),
     numberToHex(c.sumCapRatio, { size: 8 }),
     numberToHex(c.feeBps, { size: 2 }),
+    numberToHex(c.fxFeeBps, { size: 2 }),
     numberToHex(c.maxShareBps, { size: 2 }),
-    getAddress(c.sentinel).toLowerCase() as Hex,
+    getAddress(c.oracle).toLowerCase() as Hex,
   ])
 }
 
 export function decodeConfig(a: Hex): RangeConfig {
   const n = Number(hexToBigInt(sliceHex(a, 0, 1)))
-  if (n < 2 || n > MAX_TOKENS || size(a) !== 1 + 21 * n + 48) throw new Error('bad config')
+  if (n < 2 || n > MAX_TOKENS || size(a) !== 1 + 21 * n + FIXED_BYTES) throw new Error('bad config')
   const tokens: Address[] = []
   const decimals: number[] = []
   for (let k = 0; k < n; k++) tokens.push(getAddress(sliceHex(a, 1 + 20 * k, 21 + 20 * k)))
@@ -55,8 +58,9 @@ export function decodeConfig(a: Hex): RangeConfig {
     floor: hexToBigInt(sliceHex(a, o, o + 16)),
     sumCapRatio: hexToBigInt(sliceHex(a, o + 16, o + 24)),
     feeBps: Number(hexToBigInt(sliceHex(a, o + 24, o + 26))),
-    maxShareBps: Number(hexToBigInt(sliceHex(a, o + 26, o + 28))),
-    sentinel: getAddress(sliceHex(a, o + 28, o + 48)),
+    fxFeeBps: Number(hexToBigInt(sliceHex(a, o + 26, o + 28))),
+    maxShareBps: Number(hexToBigInt(sliceHex(a, o + 28, o + 30))),
+    oracle: getAddress(sliceHex(a, o + 30, o + 50)),
   }
 }
 

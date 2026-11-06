@@ -8,12 +8,13 @@ export interface RangePreset {
   concentration: number
   maxDeviationBps: number
   feeBps: number
+  fxFeeBps: number
 }
 
 export const PRESETS: readonly RangePreset[] = [
-  { id: 'tight', label: 'Tight', concentration: 30, maxDeviationBps: 50, feeBps: 1 },
-  { id: 'balanced', label: 'Balanced', concentration: 9, maxDeviationBps: 200, feeBps: 4 },
-  { id: 'wide', label: 'Wide', concentration: 2, maxDeviationBps: 800, feeBps: 10 },
+  { id: 'tight', label: 'Tight', concentration: 30, maxDeviationBps: 50, feeBps: 1, fxFeeBps: 5 },
+  { id: 'balanced', label: 'Balanced', concentration: 9, maxDeviationBps: 200, feeBps: 4, fxFeeBps: 10 },
+  { id: 'wide', label: 'Wide', concentration: 2, maxDeviationBps: 800, feeBps: 10, fxFeeBps: 30 },
 ]
 
 export const presetById = (id: PresetId) => {

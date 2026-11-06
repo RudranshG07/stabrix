@@ -8,7 +8,7 @@ const targets = [
   ['stabrixBatchTakerAbi', 'StabrixBatchTaker.sol/StabrixBatchTaker.json'],
   ['stabrixExtructionAbi', 'StabrixExtruction.sol/StabrixExtruction.json'],
   ['stabrixLensAbi', 'StabrixLens.sol/StabrixLens.json'],
-  ['depegSentinelAbi', 'DepegSentinel.sol/DepegSentinel.json'],
+  ['stabrixOracleAbi', 'StabrixOracle.sol/StabrixOracle.json'],
   ['aquaAbi', 'Aqua.sol/Aqua.json'],
   ['mockStablecoinAbi', 'MockStablecoin.sol/MockStablecoin.json'],
 ]
