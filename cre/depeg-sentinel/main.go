@@ -44,7 +44,7 @@ func fetchApi(url string, paths []string) func(*Config, *slog.Logger, *http.Send
 
 func onTick(config *Config, runtime cre.Runtime, _ *cron.Payload) (*Result, error) {
 	logger := runtime.Logger()
-	selector, err := evm.ChainSelectorFromName(config.ChainName)
+	selector, err := ChainSelector(config.ChainName, evm.ChainSelectorFromName)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func onTick(config *Config, runtime cre.Runtime, _ *cron.Payload) (*Result, erro
 
 		d := Decide(config, obs, now)
 		logger.Info("observed", "token", t.Symbol, "ref", obs.Ref, "feed", obs.Feed, "api", obs.Api,
-			"halt", d.Halt, "push", d.Push, "reason", d.Reason)
+			"price", d.PriceE18, "halt", d.Halt, "push", d.Push, "reason", d.Reason)
 		if !d.Known {
 			continue
 		}

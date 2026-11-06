@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"strconv"
 	"testing"
@@ -164,25 +165,28 @@ func TestHaltedWithoutMarketDataIsNotReported(t *testing.T) {
 	}
 }
 
-func TestHealthyPriceIsTheMedianQuote(t *testing.T) {
-	d := Decide(cfg, Observation{Ref: e18(1.12), Api: a(1.1202, 1.1198)}, 0)
-	if d.Halt || d.PriceE18.Cmp(e18(1.12)) != 0 {
-		t.Fatalf("healthy price %v", d.PriceE18)
+func TestHealthyPriceIsTheQuoteClosestToReference(t *testing.T) {
+	d := Decide(cfg, Observation{Ref: e18(0.18167), Api: a(0.180547, 0.181646)}, 0)
+	if d.Halt || d.PriceE18.Cmp(e18(0.181646)) != 0 {
+		t.Fatalf("a lagging API must not drag the BRZ price: got %v", d.PriceE18)
+	}
+	d = Decide(cfg, Observation{Ref: e18(1.11728), Api: a(1.12, 1.1165378)}, 0)
+	if d.PriceE18.Cmp(e18(1.1165378)) != 0 {
+		t.Fatalf("EURC price %v", d.PriceE18)
 	}
 }
 
-func TestMedian(t *testing.T) {
-	if Median([]*big.Int{big.NewInt(0), nil}) != nil {
-		t.Fatal("no positive values")
+func TestChainSelectorFallback(t *testing.T) {
+	unknown := func(string) (uint64, error) { return 0, fmt.Errorf("unknown") }
+	if s, err := ChainSelector("ethereum-mainnet-base-1", unknown); err != nil || s != 15971525489660198786 {
+		t.Fatalf("base mainnet selector %d %v", s, err)
 	}
-	if Median([]*big.Int{big.NewInt(7), big.NewInt(0)}).Int64() != 7 {
-		t.Fatal("zero is missing, not a price")
+	if _, err := ChainSelector("nope", unknown); err == nil {
+		t.Fatal("unknown chain must fail")
 	}
-	if Median([]*big.Int{big.NewInt(10), big.NewInt(20)}).Int64() != 15 {
-		t.Fatal("two sources average")
-	}
-	if Median([]*big.Int{big.NewInt(30), big.NewInt(10), big.NewInt(20)}).Int64() != 20 {
-		t.Fatal("odd count")
+	known := func(string) (uint64, error) { return 7, nil }
+	if s, _ := ChainSelector("ethereum-mainnet-base-1", known); s != 7 {
+		t.Fatal("sdk lookup wins when it knows the chain")
 	}
 }
 

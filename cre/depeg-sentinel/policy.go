@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -13,6 +12,23 @@ import (
 )
 
 const MaxTokens = 9
+
+// ExtraChainSelectors covers chains the pinned EVM capability cannot name yet. Values from
+// github.com/smartcontractkit/chain-selectors selectors.yml.
+var ExtraChainSelectors = map[string]uint64{
+	"ethereum-mainnet-base-1": 15971525489660198786,
+}
+
+func ChainSelector(name string, lookup func(string) (uint64, error)) (uint64, error) {
+	selector, err := lookup(name)
+	if err == nil {
+		return selector, nil
+	}
+	if s, ok := ExtraChainSelectors[name]; ok {
+		return s, nil
+	}
+	return 0, err
+}
 
 type TokenConfig struct {
 	Symbol     string   `json:"symbol"`
@@ -94,8 +110,9 @@ func deviationBps(price, ref *big.Int) int64 {
 
 func positive(v *big.Int) bool { return v != nil && v.Sign() > 0 }
 
-// Decide halts on the least alarming offchain quote, so one stale API cannot halt a healthy coin, and reports the
-// lowest market price for a halted coin, which is the safe side for backstop makers. A halted coin with no market
+// Decide halts on the least alarming offchain quote, so one stale API cannot halt a healthy coin. A healthy coin is
+// reported at the quote closest to its reference, so one lagging API cannot misprice ranges, and a halted coin at
+// the lowest market price, which is the safe side for backstop makers. A halted coin with no market
 // data is not reported, so its onchain price ages out instead of being refreshed with the reference rate.
 func Decide(cfg *Config, o Observation, now int64) Decision {
 	ref := o.Ref
@@ -162,7 +179,12 @@ func Decide(cfg *Config, o Observation, now int64) Decision {
 			}
 		}
 	case apiOk:
-		d.PriceE18 = Median(quotes)
+		d.PriceE18 = quotes[0]
+		for _, q := range quotes[1:] {
+			if deviationBps(q, ref) < deviationBps(d.PriceE18, ref) {
+				d.PriceE18 = q
+			}
+		}
 	case feedOk:
 		d.PriceE18 = o.Feed
 	default:
@@ -176,25 +198,6 @@ func Decide(cfg *Config, o Observation, now int64) Decision {
 			now-o.OnchainAt >= cfg.HeartbeatSec
 	}
 	return d
-}
-
-func Median(values []*big.Int) *big.Int {
-	var v []*big.Int
-	for _, x := range values {
-		if positive(x) {
-			v = append(v, x)
-		}
-	}
-	if len(v) == 0 {
-		return nil
-	}
-	sort.Slice(v, func(a, b int) bool { return v[a].Cmp(v[b]) < 0 })
-	m := len(v) / 2
-	if len(v)%2 == 1 {
-		return new(big.Int).Set(v[m])
-	}
-	s := new(big.Int).Add(v[m-1], v[m])
-	return s.Quo(s, big.NewInt(2))
 }
 
 func ScaleFeed(answer *big.Int, decimals int64) *big.Int {
