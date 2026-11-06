@@ -1,0 +1,232 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-paper: #0a0a0a;
+  --color-surface: #161616;
+  --color-surface-hover: #1e1e1e;
+  --color-surface-line: #232323;
+  --color-line: #313131;
+  --color-ink: #e6e6e6;
+  --color-muted: #8b96a3;
+  --color-accent: #c8f53a;
+  --color-accent-hover: #d4f76a;
+  --color-on-accent: #121719;
+  --color-accent-text: #c8f53a;
+  --color-series-lime: #c8f53a;
+  --color-grid: #1e1e1e;
+  --color-grid-strong: #313131;
+  --color-violet: #7e5cf2;
+  --color-violet-soft: #a08cf6;
+  --color-up: #3fd07f;
+  --color-down: #ff6b61;
+
+  --color-tone-signal: #d9f27a;
+  --color-tone-scan: #6fdcea;
+  --color-tone-sand: #e9d8a6;
+  --color-tone-sage: #b9d3b0;
+  --color-tone-steel: #b8c4d6;
+  --color-tone-rose: #f2a7a0;
+  --color-tone-ink: #121719;
+
+  --radius-card: 20px;
+
+  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+@layer base {
+  :root[data-theme='light'] {
+    --color-paper: #f0f2ee;
+    --color-surface: #fbfcfa;
+    --color-surface-hover: #e6eae4;
+    --color-surface-line: #dde3de;
+    --color-line: #c9d1cb;
+    --color-ink: #141c1a;
+    --color-muted: #5d6763;
+    --color-accent: #c6f432;
+    --color-accent-hover: #b6e620;
+    --color-accent-text: #4a6a00;
+    --color-series-lime: #7da100;
+    --color-grid: #e1e6e1;
+    --color-grid-strong: #c9d1cb;
+    --color-violet: #6a48e8;
+    --color-up: #1f8a4c;
+    --color-down: #c9362e;
+    color-scheme: light;
+  }
+  html {
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-paper text-ink font-sans;
+  }
+  ::selection {
+    @apply bg-accent text-on-accent;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-3 outline-accent;
+  }
+}
+
+@utility label {
+  @apply flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.12em] text-muted;
+}
+
+@utility caption {
+  @apply font-mono text-[11px] tracking-[0.04em] text-muted;
+}
+
+@utility title {
+  @apply font-semibold uppercase tracking-[-0.04em];
+}
+
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility rule {
+  border-top: 1px dashed var(--color-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility rise {
+  animation: rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.reveal > * {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 520ms ease,
+    transform 620ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+.reveal.is-active > * {
+  opacity: 1;
+  transform: none;
+}
+
+.step-pane {
+  visibility: hidden;
+}
+.step-pane.is-active {
+  visibility: visible;
+}
+.step-pane > * {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 520ms ease,
+    transform 620ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+.step-pane.is-active > * {
+  opacity: 1;
+  transform: none;
+}
+.step-pane.is-active > .step-kicker {
+  opacity: 0.55;
+}
+.step-pane.is-active > .step-note {
+  opacity: 0.68;
+}
+
+.rising {
+  --band: 30rem;
+  --dur: 34s;
+  position: relative;
+  height: var(--band);
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent 100%);
+}
+.rising > span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  font-style: italic;
+  font-size: 1.35rem;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  color: var(--color-muted);
+  transform-origin: left center;
+  will-change: transform, opacity;
+  animation: rise-phrase var(--dur) linear infinite;
+  animation-delay: calc(var(--dur) / var(--n) * var(--i) * -1);
+}
+@keyframes rise-phrase {
+  0% {
+    transform: translateY(var(--band)) scale(0.7);
+    opacity: 0;
+  }
+  25% {
+    transform: translateY(calc(var(--band) * 0.75 - 1rem)) scale(0.95);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(calc(var(--band) * 0.5 - 2rem)) scale(1.3);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(calc(var(--band) * 0.25 - 3rem)) scale(0.95);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-4rem) scale(0.7);
+    opacity: 0;
+  }
+}
+
+a,
+button {
+  transition-timing-function: ease;
+}
+
+@media (max-width: 900px) {
+  .rising {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal > *,
+  .step-pane > * {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .rising {
+    display: none;
+  }
+}
