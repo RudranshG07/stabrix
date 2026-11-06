@@ -18,6 +18,7 @@ export type StabrixErrorCode =
   | 'RangeEdge'
   | 'ExposureCap'
   | 'ValueDecreased'
+  | 'BackstopFull'
 
 export class StabrixMathError extends Error {
   constructor(readonly code: StabrixErrorCode) {
@@ -44,6 +45,8 @@ export function sqrt(a: bigint): bigint {
 const ceilDiv = (a: bigint, b: bigint) => (a === 0n ? 0n : (a - 1n) / b + 1n)
 
 export const rateFromDecimals = (decimals: number) => 10n ** BigInt(36 - decimals)
+
+export const rateWithPrice = (decimals: number, priceE18: bigint) => (rateFromDecimals(decimals) * priceE18) / WAD
 
 export function virtualBalances(real: readonly bigint[], rates: readonly bigint[], floor: bigint): bigint[] {
   return real.map((x, k) => (x * rates[k]!) / WAD + floor)

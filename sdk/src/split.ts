@@ -6,6 +6,7 @@ export interface RangeState {
   rates: readonly bigint[]
   range: Range
   indexOf: (token: string) => number
+  quote?: (i: number, j: number, amountIn: bigint) => bigint
 }
 
 export interface Leg {
@@ -24,7 +25,7 @@ export interface SplitResult {
 function outFor(s: RangeState, i: number, j: number, amount: bigint): bigint | null {
   if (amount === 0n) return 0n
   try {
-    return exactIn(s.real, s.rates, s.range, i, j, amount)
+    return s.quote ? s.quote(i, j, amount) : exactIn(s.real, s.rates, s.range, i, j, amount)
   } catch (e) {
     if (e instanceof StabrixMathError) return null
     throw e
