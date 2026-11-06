@@ -15,16 +15,22 @@ interface IStabrixPricer {
 
 contract StabrixRouter is Simulator, SwapVM, AquaOpcodes {
     IStabrixPricer public immutable PRICER;
+    IStabrixPricer public immutable BACKSTOP;
 
-    constructor(address aqua, address weth, address owner, address pricer)
+    constructor(address aqua, address weth, address owner, address pricer, address backstop)
         SwapVM(aqua, weth, owner, "Stabrix", "1")
         AquaOpcodes(aqua)
     {
         PRICER = IStabrixPricer(pricer);
+        BACKSTOP = IStabrixPricer(backstop);
     }
 
     function stabrixOpcode() external pure returns (uint8) {
         return uint8(_opcodes().length);
+    }
+
+    function backstopOpcode() external pure returns (uint8) {
+        return uint8(_opcodes().length + 1);
     }
 
     function saltOpcode() external pure returns (uint8) {
@@ -38,14 +44,19 @@ contract StabrixRouter is Simulator, SwapVM, AquaOpcodes {
         returns (function(Context memory, bytes calldata) internal[] memory all)
     {
         function(Context memory, bytes calldata) internal[] memory base = _opcodes();
-        all = new function(Context memory, bytes calldata) internal[](base.length + 1);
+        all = new function(Context memory, bytes calldata) internal[](base.length + 2);
         for (uint256 k; k < base.length; ++k) {
             all[k] = base[k];
         }
         all[base.length] = _stabrixTick;
+        all[base.length + 1] = _stabrixBackstop;
     }
 
     function _stabrixTick(Context memory ctx, bytes calldata args) internal view {
         ctx.swap = PRICER.price(ctx.query, ctx.swap, args);
+    }
+
+    function _stabrixBackstop(Context memory ctx, bytes calldata args) internal view {
+        ctx.swap = BACKSTOP.price(ctx.query, ctx.swap, args);
     }
 }

@@ -6,10 +6,12 @@ import {ISwapVM} from "@1inch/swap-vm/src/interfaces/ISwapVM.sol";
 import {MakerTraitsLib} from "@1inch/swap-vm/src/libs/MakerTraits.sol";
 
 import {StabrixConfig} from "./StabrixConfig.sol";
+import {StabrixBackstopConfig} from "./StabrixBackstopConfig.sol";
 import {StabrixPricing} from "./StabrixPricing.sol";
 
 interface IStabrixRouter {
     function stabrixOpcode() external pure returns (uint8);
+    function backstopOpcode() external pure returns (uint8);
     function saltOpcode() external pure returns (uint8);
     function hash(ISwapVM.Order calldata order) external view returns (bytes32);
 }
@@ -49,6 +51,35 @@ contract StabrixLens {
         returns (ISwapVM.Order memory)
     {
         bytes memory args = abi.encodePacked(extruction, StabrixConfig.encode(c));
+        bytes memory program = bytes.concat(
+            _instruction(OFFICIAL_EXTRUCTION_OPCODE, args), _instruction(OFFICIAL_SALT_OPCODE, abi.encodePacked(salt))
+        );
+        return _order(maker, program);
+    }
+
+    function encodeBackstopConfig(StabrixBackstopConfig.Config calldata c) public pure returns (bytes memory) {
+        return StabrixBackstopConfig.encode(c);
+    }
+
+    function buildBackstopOrder(address router, address maker, StabrixBackstopConfig.Config calldata c, uint64 salt)
+        external
+        view
+        returns (ISwapVM.Order memory)
+    {
+        bytes memory program = bytes.concat(
+            _instruction(IStabrixRouter(router).backstopOpcode(), StabrixBackstopConfig.encode(c)),
+            _instruction(IStabrixRouter(router).saltOpcode(), abi.encodePacked(salt))
+        );
+        return _order(maker, program);
+    }
+
+    function buildBackstopExtructionOrder(
+        address backstop,
+        address maker,
+        StabrixBackstopConfig.Config calldata c,
+        uint64 salt
+    ) external pure returns (ISwapVM.Order memory) {
+        bytes memory args = abi.encodePacked(backstop, StabrixBackstopConfig.encode(c));
         bytes memory program = bytes.concat(
             _instruction(OFFICIAL_EXTRUCTION_OPCODE, args), _instruction(OFFICIAL_SALT_OPCODE, abi.encodePacked(salt))
         );
