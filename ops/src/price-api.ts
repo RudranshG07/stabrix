@@ -13,7 +13,7 @@ createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'access-control-allow-origin': '*',
-      'access-control-allow-methods': 'GET,POST',
+      'access-control-allow-methods': 'GET,POST,DELETE',
       'access-control-allow-headers': 'content-type',
     })
     return res.end()
@@ -24,7 +24,11 @@ createServer(async (req, res) => {
   const match = url.pathname.match(/^\/price\/([A-Za-z0-9]+)$/)
   if (req.method === 'GET' && match) {
     const symbol = match[1]!
-    return json(res, 200, { symbol, price: prices.get(symbol) ?? 1 })
+    return json(res, 200, { symbol, price: prices.get(symbol) ?? null })
+  }
+  if (req.method === 'DELETE' && match) {
+    prices.delete(match[1]!)
+    return json(res, 200, { symbol: match[1], price: null })
   }
   if (req.method === 'POST' && url.pathname === '/price') {
     let raw = ''
