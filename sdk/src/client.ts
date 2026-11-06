@@ -436,11 +436,12 @@ export class StabrixClient {
     await this.ensureAllowance(wallet, quote.tokenIn, this.deployment.batchTaker, quote.filled)
     const minOut = (quote.amountOut * BigInt(10_000 - slippageBps)) / 10_000n
     const block = await this.publicClient.getBlock()
+    const now = Math.max(Number(block.timestamp), Math.floor(Date.now() / 1000))
     const hash = await wallet.writeContract({
       address: this.deployment.batchTaker,
       abi: stabrixBatchTakerAbi,
       functionName: 'swapExactIn',
-      args: [quote.tokenIn, quote.tokenOut, this.toLegs(quote), minOut, wallet.account.address, Number(block.timestamp) + deadlineSeconds],
+      args: [quote.tokenIn, quote.tokenOut, this.toLegs(quote), minOut, wallet.account.address, now + deadlineSeconds],
     })
     const receipt = await this.publicClient.waitForTransactionReceipt({ hash })
     if (receipt.status !== 'success') throw new Error(`swap reverted in ${hash}`)
