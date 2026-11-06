@@ -6,6 +6,7 @@ import {ISwapVM} from "@1inch/swap-vm/src/interfaces/ISwapVM.sol";
 import {MakerTraitsLib} from "@1inch/swap-vm/src/libs/MakerTraits.sol";
 
 import {StabrixConfig} from "./StabrixConfig.sol";
+import {StabrixPricing} from "./StabrixPricing.sol";
 
 interface IStabrixRouter {
     function stabrixOpcode() external pure returns (uint8);
@@ -66,6 +67,13 @@ contract StabrixLens {
             (uint248 b, uint8 count) = AQUA.rawBalances(order.maker, router, strategyHash, tokens[k]);
             amounts[k] = b;
             if (count != tokens.length) active = false;
+        }
+    }
+
+    function spendable(address maker, address[] calldata tokens) external view returns (uint256[] memory amounts) {
+        amounts = new uint256[](tokens.length);
+        for (uint256 k; k < tokens.length; ++k) {
+            amounts[k] = StabrixPricing.spendable(AQUA, maker, tokens[k]);
         }
     }
 

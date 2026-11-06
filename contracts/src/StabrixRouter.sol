@@ -4,15 +4,24 @@ pragma solidity 0.8.30;
 import {Simulator} from "@1inch/solidity-utils/contracts/mixins/Simulator.sol";
 import {SwapVM} from "@1inch/swap-vm/src/SwapVM.sol";
 import {AquaOpcodes} from "@1inch/swap-vm/src/opcodes/AquaOpcodes.sol";
-import {Context} from "@1inch/swap-vm/src/libs/VM.sol";
+import {Context, SwapQuery, SwapRegisters} from "@1inch/swap-vm/src/libs/VM.sol";
 
-import {StabrixPricing} from "./StabrixPricing.sol";
+interface IStabrixPricer {
+    function price(SwapQuery calldata query, SwapRegisters calldata swap, bytes calldata args)
+        external
+        view
+        returns (SwapRegisters memory);
+}
 
 contract StabrixRouter is Simulator, SwapVM, AquaOpcodes {
-    constructor(address aqua, address weth, address owner)
+    IStabrixPricer public immutable PRICER;
+
+    constructor(address aqua, address weth, address owner, address pricer)
         SwapVM(aqua, weth, owner, "Stabrix", "1")
         AquaOpcodes(aqua)
-    {}
+    {
+        PRICER = IStabrixPricer(pricer);
+    }
 
     function stabrixOpcode() external pure returns (uint8) {
         return uint8(_opcodes().length);
@@ -37,6 +46,6 @@ contract StabrixRouter is Simulator, SwapVM, AquaOpcodes {
     }
 
     function _stabrixTick(Context memory ctx, bytes calldata args) internal view {
-        ctx.swap = StabrixPricing.price(AQUA, address(this), ctx.query, ctx.swap, args);
+        ctx.swap = PRICER.price(ctx.query, ctx.swap, args);
     }
 }
