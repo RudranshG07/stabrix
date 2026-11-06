@@ -16,26 +16,29 @@ import (
 )
 
 type Result struct {
-	Changed []string `json:"changed"`
-	TxHash  string   `json:"txHash,omitempty"`
+	Pushed []string `json:"pushed"`
+	TxHash string   `json:"txHash,omitempty"`
 }
 
 func InitWorkflow(config *Config, logger *slog.Logger, _ cre.SecretsProvider) (cre.Workflow[*Config], error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
 	return cre.Workflow[*Config]{
 		cre.Handler(cron.Trigger(&cron.Config{Schedule: config.Schedule}), onTick),
 	}, nil
 }
 
-func fetchPrice(token TokenConfig) func(*Config, *slog.Logger, *http.SendRequester) (*big.Int, error) {
-	return func(_ *Config, _ *slog.Logger, r *http.SendRequester) (*big.Int, error) {
-		resp, err := r.SendRequest(&http.Request{Url: token.ApiUrl, Method: "GET"}).Await()
+func fetchApi(url string, paths []string) func(*Config, *slog.Logger, *http.SendRequester) (ApiPrices, error) {
+	return func(_ *Config, _ *slog.Logger, r *http.SendRequester) (ApiPrices, error) {
+		resp, err := r.SendRequest(&http.Request{Url: url, Method: "GET"}).Await()
 		if err != nil {
-			return nil, err
+			return NewApiPrices(), err
 		}
 		if resp.StatusCode != 200 {
-			return nil, fmt.Errorf("%s price api status %d", token.Symbol, resp.StatusCode)
+			return NewApiPrices(), fmt.Errorf("%s status %d", url, resp.StatusCode)
 		}
-		return ParsePriceE8(resp.Body, token.JsonPath)
+		return ParseApi(resp.Body, paths), nil
 	}
 }
 
@@ -46,57 +49,82 @@ func onTick(config *Config, runtime cre.Runtime, _ *cron.Payload) (*Result, erro
 		return nil, err
 	}
 	chain := &evm.Client{ChainSelector: selector}
-	sentinel := common.HexToAddress(config.Sentinel)
 	now := runtime.Now().Unix()
-
 	n := len(config.Tokens)
-	tokens := make([]common.Address, n)
-	prices := make([]*big.Int, n)
-	halted := make([]bool, n)
+
+	plan := PlanReads(config)
+	data, err := EncodeAggregate3(plan.Calls)
+	if err != nil {
+		return nil, err
+	}
+	reply, err := chain.CallContract(runtime, &evm.CallContractRequest{
+		Call: &evm.CallMsg{To: common.HexToAddress(config.Multicall).Bytes(), Data: data},
+	}).Await()
+	if err != nil {
+		return nil, fmt.Errorf("multicall: %w", err)
+	}
+	results, err := DecodeAggregate3(reply.Data)
+	if err != nil || len(results) != len(plan.Calls) {
+		return nil, fmt.Errorf("decode multicall: %v", err)
+	}
+
+	apis := make([]ApiPrices, 0, len(config.ApiUrls))
+	for a, url := range config.ApiUrls {
+		paths := make([]string, n)
+		for k, t := range config.Tokens {
+			paths[k] = t.ApiPaths[a]
+		}
+		prices, err := http.SendRequest(config, runtime, &http.Client{}, fetchApi(url, paths), cre.ConsensusAggregationFromTags[ApiPrices]()).Await()
+		if err != nil {
+			logger.Warn("price api unavailable", "url", url, "err", err)
+			continue
+		}
+		apis = append(apis, prices)
+	}
+
+	var tokens []common.Address
+	var prices []*big.Int
+	var halted []bool
 	result := &Result{}
-
 	for k, t := range config.Tokens {
-		tokens[k] = common.HexToAddress(t.Address)
-		obs := Observation{}
-
-		feed, err := chain.CallContract(runtime, &evm.CallContractRequest{
-			Call: &evm.CallMsg{To: common.HexToAddress(t.Feed).Bytes(), Data: latestRoundDataSelector},
-		}).Await()
-		if err == nil {
-			obs.FeedE8, obs.FeedUpdatedAt, err = DecodeLatestRound(feed.Data)
-		}
+		status, err := DecodeStatus(results[plan.Status[k]].ReturnData)
 		if err != nil {
-			logger.Warn("chainlink feed unavailable", "token", t.Symbol, "err", err)
+			return nil, fmt.Errorf("oracle status for %s: %w", t.Symbol, err)
 		}
-
-		status, err := chain.CallContract(runtime, &evm.CallContractRequest{
-			Call: &evm.CallMsg{To: sentinel.Bytes(), Data: StatusCall(tokens[k])},
-		}).Await()
-		if err != nil {
-			return nil, fmt.Errorf("read sentinel status for %s: %w", t.Symbol, err)
+		obs := Observation{
+			Pegged:       t.RefFeed == "",
+			Halted:       status.Halted,
+			OnchainPrice: status.PriceE18,
+			OnchainAt:    status.ObservedAt,
 		}
-		if obs.Halted, err = DecodeStatus(status.Data); err != nil {
-			return nil, err
+		if plan.Ref[k] >= 0 {
+			obs.Ref = FreshFeed(results[plan.Ref[k]], config.FeedDecimals, config.RefMaxAgeSec, now)
 		}
-
-		api, err := http.SendRequest(config, runtime, &http.Client{}, fetchPrice(t), cre.ConsensusMedianAggregation[*big.Int]()).Await()
-		if err != nil {
-			logger.Warn("price api unavailable", "token", t.Symbol, "err", err)
-		} else {
-			obs.ApiE8 = api
+		if plan.Market[k] >= 0 {
+			obs.Feed = FreshFeed(results[plan.Market[k]], config.FeedDecimals, config.MarketMaxAgeSec, now)
 		}
+		quotes := make([]*big.Int, 0, len(apis))
+		for a := range apis {
+			quotes = append(quotes, apis[a].Get(k))
+		}
+		obs.Api = Median(quotes)
 
 		d := Decide(config, obs, now)
-		prices[k] = d.PriceE8
-		halted[k] = d.Halt
-		logger.Info("observed", "token", t.Symbol, "feedE8", obs.FeedE8, "apiE8", obs.ApiE8, "halt", d.Halt, "reason", d.Reason)
-		if d.Halt != obs.Halted {
-			result.Changed = append(result.Changed, fmt.Sprintf("%s:%t", t.Symbol, d.Halt))
+		logger.Info("observed", "token", t.Symbol, "ref", obs.Ref, "feed", obs.Feed, "api", obs.Api,
+			"halt", d.Halt, "push", d.Push, "reason", d.Reason)
+		if !d.Known {
+			continue
+		}
+		tokens = append(tokens, common.HexToAddress(t.Address))
+		prices = append(prices, d.PriceE18)
+		halted = append(halted, d.Halt)
+		if d.Push {
+			result.Pushed = append(result.Pushed, fmt.Sprintf("%s:%t", t.Symbol, d.Halt))
 		}
 	}
 
-	if len(result.Changed) == 0 {
-		logger.Info("no status change, skipping write")
+	if len(result.Pushed) == 0 {
+		logger.Info("nothing to push")
 		return result, nil
 	}
 
@@ -115,7 +143,7 @@ func onTick(config *Config, runtime cre.Runtime, _ *cron.Payload) (*Result, erro
 	}
 
 	resp, err := chain.WriteReport(runtime, &evm.WriteCreReportRequest{
-		Receiver:  sentinel.Bytes(),
+		Receiver:  common.HexToAddress(config.Oracle).Bytes(),
 		Report:    report,
 		GasConfig: &evm.GasConfig{GasLimit: config.GasLimit},
 	}).Await()
@@ -127,10 +155,10 @@ func onTick(config *Config, runtime cre.Runtime, _ *cron.Payload) (*Result, erro
 		if resp.ErrorMessage != nil {
 			msg = *resp.ErrorMessage
 		}
-		return nil, fmt.Errorf("sentinel write failed: %s", msg)
+		return nil, fmt.Errorf("oracle write failed: %s", msg)
 	}
 	result.TxHash = fmt.Sprintf("0x%x", resp.TxHash)
-	logger.Info("sentinel updated", "changed", result.Changed, "tx", result.TxHash)
+	logger.Info("oracle updated", "pushed", result.Pushed, "tx", result.TxHash)
 	return result, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -11,110 +12,166 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+const MaxTokens = 9
+
 type TokenConfig struct {
-	Symbol   string `json:"symbol"`
-	Address  string `json:"address"`
-	Feed     string `json:"feed"`
-	ApiUrl   string `json:"apiUrl"`
-	JsonPath string `json:"jsonPath"`
+	Symbol     string   `json:"symbol"`
+	Address    string   `json:"address"`
+	RefFeed    string   `json:"refFeed"`
+	MarketFeed string   `json:"marketFeed"`
+	ApiPaths   []string `json:"apiPaths"`
 }
 
 type Config struct {
-	Schedule      string        `json:"schedule"`
-	ChainName     string        `json:"chainName"`
-	Sentinel      string        `json:"sentinel"`
-	GasLimit      uint64        `json:"gasLimit"`
-	HardBps       int64         `json:"hardBps"`
-	SoftBps       int64         `json:"softBps"`
-	ResumeBps     int64         `json:"resumeBps"`
-	MaxFeedAgeSec int64         `json:"maxFeedAgeSec"`
-	Tokens        []TokenConfig `json:"tokens"`
+	Schedule        string        `json:"schedule"`
+	ChainName       string        `json:"chainName"`
+	Oracle          string        `json:"oracle"`
+	Multicall       string        `json:"multicall"`
+	GasLimit        uint64        `json:"gasLimit"`
+	FeedDecimals    int64         `json:"feedDecimals"`
+	HardBps         int64         `json:"hardBps"`
+	SoftBps         int64         `json:"softBps"`
+	ResumeBps       int64         `json:"resumeBps"`
+	PushBps         int64         `json:"pushBps"`
+	HeartbeatSec    int64         `json:"heartbeatSec"`
+	RefMaxAgeSec    int64         `json:"refMaxAgeSec"`
+	MarketMaxAgeSec int64         `json:"marketMaxAgeSec"`
+	ApiUrls         []string      `json:"apiUrls"`
+	Tokens          []TokenConfig `json:"tokens"`
+}
+
+func (c *Config) Validate() error {
+	if len(c.Tokens) == 0 || len(c.Tokens) > MaxTokens {
+		return fmt.Errorf("need 1 to %d tokens, got %d", MaxTokens, len(c.Tokens))
+	}
+	if c.FeedDecimals < 0 || c.FeedDecimals > 18 {
+		return fmt.Errorf("feedDecimals %d out of range", c.FeedDecimals)
+	}
+	if c.SoftBps <= 0 || c.HardBps <= c.SoftBps || c.ResumeBps >= c.SoftBps || c.PushBps <= 0 || c.HeartbeatSec <= 0 {
+		return fmt.Errorf("bad thresholds")
+	}
+	for _, t := range c.Tokens {
+		if len(t.ApiPaths) != len(c.ApiUrls) {
+			return fmt.Errorf("%s: %d api paths for %d api urls", t.Symbol, len(t.ApiPaths), len(c.ApiUrls))
+		}
+	}
+	return nil
 }
 
 type Observation struct {
-	FeedE8        *big.Int
-	FeedUpdatedAt int64
-	ApiE8         *big.Int
-	Halted        bool
+	Pegged       bool
+	Ref          *big.Int
+	Feed         *big.Int
+	Api          *big.Int
+	Halted       bool
+	OnchainPrice *big.Int
+	OnchainAt    int64
 }
 
 type Decision struct {
-	Halt    bool
-	PriceE8 *big.Int
-	Reason  string
+	Known    bool
+	Halt     bool
+	PriceE18 *big.Int
+	Push     bool
+	Reason   string
 }
 
 var (
-	oneE8     = big.NewInt(100_000_000)
-	bpsScale  = big.NewInt(10_000)
-	addrArr   = mustType("address[]")
-	int256Arr = mustType("int256[]")
-	boolArr   = mustType("bool[]")
-	uint64T   = mustType("uint64")
-	roundOut  = abi.Arguments{{Type: mustType("uint80")}, {Type: mustType("int256")}, {Type: mustType("uint256")}, {Type: mustType("uint256")}, {Type: mustType("uint80")}}
-	statusOut = abi.Arguments{{Type: mustType("bool")}, {Type: mustType("int192")}, {Type: mustType("uint64")}}
-	reportIn  = abi.Arguments{{Type: addrArr}, {Type: int256Arr}, {Type: boolArr}, {Type: uint64T}}
-
-	latestRoundDataSelector = common.FromHex("0xfeaf968c")
-	statusSelector          = common.FromHex("0x645b8b1b")
+	oneE18   = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	bpsScale = big.NewInt(10_000)
 )
 
-func mustType(t string) abi.Type {
-	ty, err := abi.NewType(t, "", nil)
-	if err != nil {
-		panic(err)
-	}
-	return ty
-}
-
-func deviationBps(priceE8 *big.Int) int64 {
-	d := new(big.Int).Sub(priceE8, oneE8)
+func deviationBps(price, ref *big.Int) int64 {
+	d := new(big.Int).Sub(price, ref)
 	d.Abs(d)
 	d.Mul(d, bpsScale)
-	d.Quo(d, oneE8)
+	d.Quo(d, ref)
+	if !d.IsInt64() {
+		return 1 << 62
+	}
 	return d.Int64()
 }
 
-func Decide(cfg *Config, o Observation, now int64) Decision {
-	feedFresh := o.FeedE8 != nil && o.FeedE8.Sign() > 0 && now-o.FeedUpdatedAt <= cfg.MaxFeedAgeSec
-	apiOk := o.ApiE8 != nil && o.ApiE8.Sign() > 0
+func positive(v *big.Int) bool { return v != nil && v.Sign() > 0 }
 
-	price := oneE8
+func Decide(cfg *Config, o Observation, now int64) Decision {
+	ref := o.Ref
+	if o.Pegged {
+		ref = oneE18
+	}
+	if !positive(ref) {
+		return Decision{Halt: o.Halted, Reason: "no reference rate"}
+	}
+	feedOk, apiOk := positive(o.Feed), positive(o.Api)
+
+	d := Decision{Known: true, PriceE18: ref}
 	switch {
 	case apiOk:
-		price = o.ApiE8
-	case feedFresh:
-		price = o.FeedE8
+		d.PriceE18 = o.Api
+	case feedOk:
+		d.PriceE18 = o.Feed
 	}
 
 	var feedDev, apiDev int64
-	if feedFresh {
-		feedDev = deviationBps(o.FeedE8)
+	if feedOk {
+		feedDev = deviationBps(o.Feed, ref)
 	}
 	if apiOk {
-		apiDev = deviationBps(o.ApiE8)
+		apiDev = deviationBps(o.Api, ref)
 	}
 
 	switch {
 	case apiOk && apiDev >= cfg.HardBps:
-		return Decision{true, price, fmt.Sprintf("offchain %dbps >= hard %dbps", apiDev, cfg.HardBps)}
-	case feedFresh && feedDev >= cfg.HardBps:
-		return Decision{true, price, fmt.Sprintf("chainlink %dbps >= hard %dbps", feedDev, cfg.HardBps)}
-	case apiOk && feedFresh && apiDev >= cfg.SoftBps && feedDev >= cfg.SoftBps:
-		return Decision{true, price, fmt.Sprintf("both sources >= soft %dbps", cfg.SoftBps)}
+		d.Halt, d.Reason = true, fmt.Sprintf("offchain %dbps >= hard %dbps", apiDev, cfg.HardBps)
+	case feedOk && feedDev >= cfg.HardBps:
+		d.Halt, d.Reason = true, fmt.Sprintf("chainlink %dbps >= hard %dbps", feedDev, cfg.HardBps)
+	case apiOk && feedOk && apiDev >= cfg.SoftBps && feedDev >= cfg.SoftBps:
+		d.Halt, d.Reason = true, fmt.Sprintf("both sources >= soft %dbps", cfg.SoftBps)
+	case o.Halted:
+		calm := (apiOk || feedOk) && (!apiOk || apiDev <= cfg.ResumeBps) && (!feedOk || feedDev <= cfg.ResumeBps)
+		d.Halt = !calm
+		if calm {
+			d.Reason = "back within resume band"
+		} else {
+			d.Reason = "holding halt until sources are within resume band"
+		}
+	default:
+		d.Reason = "within peg"
 	}
 
-	if o.Halted {
-		calm := (!apiOk || apiDev <= cfg.ResumeBps) && (!feedFresh || feedDev <= cfg.ResumeBps) && (apiOk || feedFresh)
-		if !calm {
-			return Decision{true, price, "holding halt until both sources are within resume band"}
-		}
-		return Decision{false, price, "back within resume band"}
+	d.Push = d.Halt != o.Halted
+	if !d.Push && (!o.Pegged || d.Halt) {
+		d.Push = !positive(o.OnchainPrice) ||
+			deviationBps(d.PriceE18, o.OnchainPrice) >= cfg.PushBps ||
+			now-o.OnchainAt >= cfg.HeartbeatSec
 	}
-	return Decision{false, price, "within peg"}
+	return d
 }
 
-func ParsePriceE8(body []byte, path string) (*big.Int, error) {
+func Median(values []*big.Int) *big.Int {
+	var v []*big.Int
+	for _, x := range values {
+		if positive(x) {
+			v = append(v, x)
+		}
+	}
+	if len(v) == 0 {
+		return nil
+	}
+	sort.Slice(v, func(a, b int) bool { return v[a].Cmp(v[b]) < 0 })
+	m := len(v) / 2
+	if len(v)%2 == 1 {
+		return new(big.Int).Set(v[m])
+	}
+	s := new(big.Int).Add(v[m-1], v[m])
+	return s.Quo(s, big.NewInt(2))
+}
+
+func ScaleFeed(answer *big.Int, decimals int64) *big.Int {
+	return new(big.Int).Mul(answer, new(big.Int).Exp(big.NewInt(10), big.NewInt(18-decimals), nil))
+}
+
+func ParsePriceE18(body []byte, path string) (*big.Int, error) {
 	var root any
 	if err := json.Unmarshal(body, &root); err != nil {
 		return nil, fmt.Errorf("invalid json: %w", err)
@@ -139,11 +196,131 @@ func ParsePriceE8(body []byte, path string) (*big.Int, error) {
 		return nil, fmt.Errorf("path %q: not a number", path)
 	}
 	r, ok := new(big.Rat).SetString(text)
-	if !ok {
-		return nil, fmt.Errorf("path %q: bad number %q", path, text)
+	if !ok || r.Sign() <= 0 {
+		return nil, fmt.Errorf("path %q: bad price %q", path, text)
 	}
-	r.Mul(r, new(big.Rat).SetInt(oneE8))
+	r.Mul(r, new(big.Rat).SetInt(oneE18))
 	return new(big.Int).Quo(r.Num(), r.Denom()), nil
+}
+
+type ApiPrices struct {
+	P0 *big.Int `consensus_aggregation:"median"`
+	P1 *big.Int `consensus_aggregation:"median"`
+	P2 *big.Int `consensus_aggregation:"median"`
+	P3 *big.Int `consensus_aggregation:"median"`
+	P4 *big.Int `consensus_aggregation:"median"`
+	P5 *big.Int `consensus_aggregation:"median"`
+	P6 *big.Int `consensus_aggregation:"median"`
+	P7 *big.Int `consensus_aggregation:"median"`
+	P8 *big.Int `consensus_aggregation:"median"`
+}
+
+func (a *ApiPrices) slots() [MaxTokens]**big.Int {
+	return [MaxTokens]**big.Int{&a.P0, &a.P1, &a.P2, &a.P3, &a.P4, &a.P5, &a.P6, &a.P7, &a.P8}
+}
+
+func NewApiPrices() ApiPrices {
+	var a ApiPrices
+	for _, s := range a.slots() {
+		*s = big.NewInt(0)
+	}
+	return a
+}
+
+func (a *ApiPrices) Set(k int, v *big.Int) { *a.slots()[k] = v }
+
+func (a *ApiPrices) Get(k int) *big.Int { return *a.slots()[k] }
+
+func ParseApi(body []byte, paths []string) ApiPrices {
+	a := NewApiPrices()
+	for k, p := range paths {
+		if p == "" {
+			continue
+		}
+		if v, err := ParsePriceE18(body, p); err == nil {
+			a.Set(k, v)
+		}
+	}
+	return a
+}
+
+var (
+	multicallAbi = mustAbi(`[{"name":"aggregate3","type":"function","stateMutability":"payable",
+		"inputs":[{"name":"calls","type":"tuple[]","components":[{"name":"target","type":"address"},{"name":"allowFailure","type":"bool"},{"name":"callData","type":"bytes"}]}],
+		"outputs":[{"name":"returnData","type":"tuple[]","components":[{"name":"success","type":"bool"},{"name":"returnData","type":"bytes"}]}]}]`)
+	roundOut  = abi.Arguments{{Type: mustType("uint80")}, {Type: mustType("int256")}, {Type: mustType("uint256")}, {Type: mustType("uint256")}, {Type: mustType("uint80")}}
+	statusOut = abi.Arguments{{Type: mustType("bool")}, {Type: mustType("uint64")}, {Type: mustType("uint128")}}
+	reportIn  = abi.Arguments{{Type: mustType("address[]")}, {Type: mustType("uint256[]")}, {Type: mustType("bool[]")}, {Type: mustType("uint64")}}
+
+	latestRoundDataSelector = common.FromHex("0xfeaf968c")
+	statusSelector          = common.FromHex("0x645b8b1b")
+)
+
+func mustType(t string) abi.Type {
+	ty, err := abi.NewType(t, "", nil)
+	if err != nil {
+		panic(err)
+	}
+	return ty
+}
+
+func mustAbi(s string) abi.ABI {
+	a, err := abi.JSON(strings.NewReader(s))
+	if err != nil {
+		panic(err)
+	}
+	return a
+}
+
+type Call3 struct {
+	Target       common.Address
+	AllowFailure bool
+	CallData     []byte
+}
+
+type Result3 struct {
+	Success    bool
+	ReturnData []byte
+}
+
+type CallPlan struct {
+	Calls  []Call3
+	Status []int
+	Ref    []int
+	Market []int
+}
+
+func PlanReads(cfg *Config) CallPlan {
+	oracle := common.HexToAddress(cfg.Oracle)
+	n := len(cfg.Tokens)
+	p := CallPlan{Status: make([]int, n), Ref: make([]int, n), Market: make([]int, n)}
+	add := func(to common.Address, allowFailure bool, data []byte) int {
+		p.Calls = append(p.Calls, Call3{Target: to, AllowFailure: allowFailure, CallData: data})
+		return len(p.Calls) - 1
+	}
+	for k, t := range cfg.Tokens {
+		p.Status[k] = add(oracle, false, StatusCall(common.HexToAddress(t.Address)))
+		p.Ref[k], p.Market[k] = -1, -1
+		if t.RefFeed != "" {
+			p.Ref[k] = add(common.HexToAddress(t.RefFeed), true, latestRoundDataSelector)
+		}
+		if t.MarketFeed != "" {
+			p.Market[k] = add(common.HexToAddress(t.MarketFeed), true, latestRoundDataSelector)
+		}
+	}
+	return p
+}
+
+func EncodeAggregate3(calls []Call3) ([]byte, error) {
+	return multicallAbi.Pack("aggregate3", calls)
+}
+
+func DecodeAggregate3(data []byte) ([]Result3, error) {
+	var out []Result3
+	if err := multicallAbi.UnpackIntoInterface(&out, "aggregate3", data); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func DecodeLatestRound(data []byte) (*big.Int, int64, error) {
@@ -154,12 +331,29 @@ func DecodeLatestRound(data []byte) (*big.Int, int64, error) {
 	return out[1].(*big.Int), out[3].(*big.Int).Int64(), nil
 }
 
-func DecodeStatus(data []byte) (bool, error) {
+type OnchainStatus struct {
+	Halted     bool
+	ObservedAt int64
+	PriceE18   *big.Int
+}
+
+func DecodeStatus(data []byte) (OnchainStatus, error) {
 	out, err := statusOut.Unpack(data)
 	if err != nil {
-		return false, err
+		return OnchainStatus{}, err
 	}
-	return out[0].(bool), nil
+	return OnchainStatus{Halted: out[0].(bool), ObservedAt: int64(out[1].(uint64)), PriceE18: out[2].(*big.Int)}, nil
+}
+
+func FreshFeed(r Result3, decimals, maxAge, now int64) *big.Int {
+	if !r.Success {
+		return nil
+	}
+	answer, updatedAt, err := DecodeLatestRound(r.ReturnData)
+	if err != nil || answer.Sign() <= 0 || updatedAt > now || now-updatedAt > maxAge {
+		return nil
+	}
+	return ScaleFeed(answer, decimals)
 }
 
 func StatusCall(token common.Address) []byte {
