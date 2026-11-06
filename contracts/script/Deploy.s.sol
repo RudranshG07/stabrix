@@ -7,6 +7,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {StabrixRouter} from "../src/StabrixRouter.sol";
 import {StabrixLens} from "../src/StabrixLens.sol";
 import {StabrixExtruction} from "../src/StabrixExtruction.sol";
+import {StabrixBackstop} from "../src/StabrixBackstop.sol";
 import {StabrixBatchTaker} from "../src/StabrixBatchTaker.sol";
 import {StabrixOracle} from "../src/StabrixOracle.sol";
 import {MockStablecoin} from "../src/mocks/MockStablecoin.sol";
@@ -23,10 +24,12 @@ contract Deploy is Script {
     uint32 constant REPORT_MAX_AGE = 900;
     uint16 constant MAX_DEVIATION_BPS = 50;
     uint32 constant FEED_MAX_AGE = 4500;
+    uint32 constant MARKET_FEED_MAX_AGE = 90_000;
 
     struct Coin {
         address token;
         address feed;
+        address marketFeed;
     }
 
     function run() external {
@@ -45,7 +48,8 @@ contract Deploy is Script {
             ? OFFICIAL_ROUTER
             : address(new AquaSwapVMRouter(aqua, WETH, deployer, "1inch SwapVM v1.0", "1.0.2"));
         StabrixExtruction extruction = new StabrixExtruction(aqua);
-        StabrixRouter router = new StabrixRouter(aqua, WETH, deployer, address(extruction));
+        StabrixBackstop backstop = new StabrixBackstop(aqua);
+        StabrixRouter router = new StabrixRouter(aqua, WETH, deployer, address(extruction), address(backstop));
         StabrixLens lens = new StabrixLens(aqua);
         StabrixBatchTaker batch = new StabrixBatchTaker();
         StabrixOracle oracle = new StabrixOracle(forwarder, deployer, REPORT_MAX_AGE, MAX_DEVIATION_BPS);
@@ -53,6 +57,9 @@ contract Deploy is Script {
         if (coins.length == 0) coins = _mockCoins();
         for (uint256 k; k < coins.length; ++k) {
             if (coins[k].feed != address(0)) oracle.setFeed(coins[k].token, coins[k].feed, FEED_MAX_AGE);
+            if (coins[k].marketFeed != address(0)) {
+                oracle.setMarketFeed(coins[k].token, coins[k].marketFeed, MARKET_FEED_MAX_AGE);
+            }
         }
         vm.stopBroadcast();
 
@@ -67,6 +74,7 @@ contract Deploy is Script {
             _field("router", address(router)),
             _field("officialRouter", officialRouter),
             _field("extruction", address(extruction)),
+            _field("backstop", address(backstop)),
             _field("batchTaker", address(batch)),
             _field("oracle", address(oracle)),
             _field("lens", address(lens)),
@@ -86,14 +94,18 @@ contract Deploy is Script {
 
     function _baseCoins() internal pure returns (Coin[] memory c) {
         c = new Coin[](8);
-        c[0] = Coin(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, address(0));
-        c[1] = Coin(0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2, address(0));
-        c[2] = Coin(0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb, address(0));
-        c[3] = Coin(0x820C137fa70C8691f0e44Dc420a5e53c168921Dc, address(0));
-        c[4] = Coin(0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34, address(0));
-        c[5] = Coin(0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42, 0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F);
-        c[6] = Coin(0xE9185Ee218cae427aF7B9764A011bb89FeA761B4, 0x0b0E64c05083FdF9ED7C5D3d8262c4216eFc9394);
-        c[7] = Coin(0x18Bc5bcC660cf2B9cE3cd51a404aFe1a0cBD3C22, 0x05A6cF213EcC5501A11a08EBefA4A8a60313ef97);
+        c[0] = Coin(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, address(0), 0x7e860098F58bBFC8648a4311b374B1D669a2bc6B);
+        c[1] = Coin(0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2, address(0), 0xf19d560eB8d2ADf07BD6D13ed03e1D11215721F9);
+        c[2] = Coin(0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb, address(0), 0x591e79239a7d679378eC8c847e5038150364C78F);
+        c[3] = Coin(0x820C137fa70C8691f0e44Dc420a5e53c168921Dc, address(0), 0x2330aaE3bca5F05169d5f4597964D44522F62930);
+        c[4] = Coin(0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34, address(0), 0x790181e93e9F4Eedb5b864860C12e4d2CffFe73B);
+        c[5] = Coin(
+            0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42,
+            0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F,
+            0x9867186e52d2F1C2c565CDA6E747101Fa56501e0
+        );
+        c[6] = Coin(0xE9185Ee218cae427aF7B9764A011bb89FeA761B4, 0x0b0E64c05083FdF9ED7C5D3d8262c4216eFc9394, address(0));
+        c[7] = Coin(0x18Bc5bcC660cf2B9cE3cd51a404aFe1a0cBD3C22, 0x05A6cF213EcC5501A11a08EBefA4A8a60313ef97, address(0));
     }
 
     function _mockCoins() internal returns (Coin[] memory c) {
@@ -126,6 +138,8 @@ contract Deploy is Script {
                 vm.toString(m.decimals()),
                 ",\"feed\":\"",
                 vm.toString(c[k].feed),
+                "\",\"marketFeed\":\"",
+                vm.toString(c[k].marketFeed),
                 "\"}"
             );
         }

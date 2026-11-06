@@ -40,7 +40,7 @@ contract MathHarness {
 
 contract Vectors is Script {
     function run() external {
-        StabrixRouter router = new StabrixRouter(address(1), address(0), address(0xBEEF), address(2));
+        StabrixRouter router = new StabrixRouter(address(1), address(0), address(0xBEEF), address(2), address(3));
         StabrixLens lens = new StabrixLens(address(1));
         MathHarness h = new MathHarness();
 
