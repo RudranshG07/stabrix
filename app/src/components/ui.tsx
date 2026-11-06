@@ -162,7 +162,7 @@ export function Tag({ children, dot }: { children: ReactNode; dot?: string }) {
 }
 
 export function VenueTag({ kind }: { kind: 'native' | 'official' }) {
-  return kind === 'official' ? <Tag dot="#b07a12">1inch router</Tag> : <Tag dot="#1d2944">Stabrix router</Tag>
+  return kind === 'official' ? <Tag dot="var(--color-series-lime)">1inch router</Tag> : <Tag dot="var(--color-violet)">Stabrix router</Tag>
 }
 
 export function KindTag({ kind }: { kind: 'range' | 'backstop' }) {

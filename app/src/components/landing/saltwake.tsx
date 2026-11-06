@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { LiveRates } from './live-rates'
 
 const SHIP = '/landing/ship.webp'
@@ -552,28 +553,33 @@ export function Saltwake() {
           Stabrix
         </div>
         <nav>
-          <a href="#" data-go="0">
+          <a href="#" data-go="0" className="hm">
             Everyday
             <NavAnchor />
           </a>
-          <a href="#" data-go="1">
+          <a href="#" data-go="1" className="hm">
             Backstop
             <NavAnchor />
           </a>
-          <a href="#how">
+          <a href="#how" className="hm">
             How it works
             <NavAnchor />
           </a>
-          <a href="/swap">
+          <a href="/docs">
+            Docs
+            <NavAnchor />
+          </a>
+          <a href="/swap" className="cta">
             App
             <NavAnchor />
           </a>
+          <ThemeToggle className="theme-btn" />
         </nav>
         <div id="scene">
           <div className="spr" id="cloudA">
             <svg viewBox="0 0 300 80" width="300" height="80" aria-hidden>
               <path
-                fill="#d3cebe"
+                style={{ fill: 'var(--cloud)' }}
                 d="M0 79c14-3 26-3 38-10-4-16 10-30 30-26 6-22 42-34 62-16 16-12 42-6 50 14 10-2 18 2 22 8 24 22 66 26 98 30z"
               />
             </svg>

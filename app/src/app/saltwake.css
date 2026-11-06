@@ -1,4 +1,8 @@
-.swp,html.sw{--paper:#e6e0cf;--ink:#201c15;--line:#16130e;--band:#d7d2c2;--band2:#dcd7c7}
+.swp,html.sw{--paper:#e6e0cf;--ink:#201c15;--line:#16130e;--band:#d7d2c2;--band2:#dcd7c7;--card:#ece7d8;--on-ink:#efe9d9;--cloud:#d3cebe;--c-red:#b4432f;--c-gold:#b07a12;--c-blue:#1d2944;--c-muted:#6b6250}
+html[data-theme=dark] .swp,html[data-theme=dark].sw{--paper:#14120e;--ink:#ece6d4;--line:#e6e0cf;--band:#1c1914;--band2:#191612;--card:#1d1a15;--on-ink:#16130e;--cloud:#2b2720;--c-red:#e0705c;--c-gold:#e3a843;--c-blue:#9db0e0;--c-muted:#a99f88}
+html[data-theme=dark] .swp #shade{opacity:.18}
+.swp .theme-btn{display:inline-grid;place-items:center;width:38px;height:38px;border:2px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);cursor:pointer}
+.swp .theme-btn svg{width:17px;height:17px;position:static;opacity:1;transform:none}
 .swp *{box-sizing:border-box;margin:0;padding:0}
 html.sw{scroll-behavior:smooth}
 html.sw,html.sw body{background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
@@ -28,9 +32,9 @@ html.sw.fine,html.sw.fine *{cursor:none}
 .swp h1{font-size:74px;line-height:.92;margin-top:24px}
 .swp .lede{margin-top:20px;font:700 13.5px/1.75 "Open Sans",sans-serif;letter-spacing:.13em;text-transform:uppercase}
 .swp .stamps{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
-.swp .stamps span{font:700 11px/1 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase;border:2px solid var(--line);border-radius:999px;padding:8px 12px 7px;background:#ece7d8}
+.swp .stamps span{font:700 11px/1 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase;border:2px solid var(--line);border-radius:999px;padding:8px 12px 7px;background:var(--card)}
 .swp .pill{display:inline-block;position:relative;font:600 19px/1 "Josefin Sans",sans-serif;text-transform:uppercase;letter-spacing:.01em;
-  border:3px solid var(--line);border-radius:999px;background:#ece7d8;box-shadow:0 7px 0 -1px var(--paper),0 7px 0 2px var(--line);transition:transform .25s,box-shadow .25s}
+  border:3px solid var(--line);border-radius:999px;background:var(--card);box-shadow:0 7px 0 -1px var(--paper),0 7px 0 2px var(--line);transition:transform .25s,box-shadow .25s}
 .swp .pill:hover{transform:translateY(3px);box-shadow:0 4px 0 -1px var(--paper),0 4px 0 2px var(--line)}
 .swp .t1 .pill{margin-top:30px;padding:21px 62px 17px}
 .swp .ccoin svg{display:block;width:100%;height:100%}
@@ -44,9 +48,9 @@ html.sw.fine,html.sw.fine *{cursor:none}
 .swp #chest .clid{clip-path:inset(0 0 54% 0)}
 .swp #chest .copen{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .swp #chest .ccoin{position:absolute;width:27%;aspect-ratio:1;opacity:0}
-.swp #chest .slip{position:absolute;left:50%;top:-34%;padding:7px 12px 6px;background:#f5efdc;border:2.5px solid var(--line);border-radius:6px;font:400 17px/1.05 "Goudy Bookletter 1911",serif;letter-spacing:-.02em;text-align:center;white-space:nowrap;opacity:0;box-shadow:3px 4px 0 rgba(22,19,14,.25)}
+.swp #chest .slip{position:absolute;left:50%;top:-34%;padding:7px 12px 6px;background:#f5efdc;color:#201c15;border:2.5px solid #16130e;border-radius:6px;font:400 17px/1.05 "Goudy Bookletter 1911",serif;letter-spacing:-.02em;text-align:center;white-space:nowrap;opacity:0;box-shadow:3px 4px 0 rgba(22,19,14,.25)}
 .swp.portrait #chest .slip{font-size:19px}
-.swp .rates{position:absolute;left:6.6%;bottom:24px;z-index:20;display:flex;align-items:center;gap:6px 18px;flex-wrap:wrap;padding:10px 16px 9px;border:2px solid var(--line);border-radius:999px;background:#ece7d8;font:700 10.5px/1 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.swp .rates{position:absolute;left:6.6%;bottom:24px;z-index:20;display:flex;align-items:center;gap:6px 18px;flex-wrap:wrap;padding:10px 16px 9px;border:2px solid var(--line);border-radius:999px;background:var(--card);font:700 10.5px/1 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase}
 .swp .rates b{font-weight:700;letter-spacing:.04em;margin-left:4px}
 .swp .rates .live{display:flex;align-items:center;gap:7px}
 .swp .rates .live i{width:7px;height:7px;border-radius:50%;background:#2f8f4e;box-shadow:0 0 0 0 rgba(47,143,78,.5);animation:swlive 2s ease-out infinite}
@@ -77,6 +81,10 @@ html.sw.fine,html.sw.fine *{cursor:none}
 .swp nav a{position:relative;font:700 12.5px/1 "Open Sans",sans-serif;letter-spacing:.17em;text-transform:uppercase;padding:6px 0}
 .swp nav a svg{position:absolute;left:100%;top:-4px;margin-left:7px;width:17px;height:21px;opacity:0;transform:translateY(-10px) rotate(-30deg);transform-origin:50% 0;transition:opacity .2s,transform .55s cubic-bezier(.3,1.9,.5,1)}
 .swp nav a:hover svg{opacity:1;transform:none}
+.swp nav{align-items:center}
+.swp nav a.cta{padding:11px 20px 9px;border:2px solid var(--line);border-radius:999px;background:var(--card);box-shadow:0 4px 0 -1px var(--paper),0 4px 0 1px var(--line);transition:transform .2s,box-shadow .2s}
+.swp nav a.cta:hover{transform:translateY(2px);box-shadow:0 2px 0 -1px var(--paper),0 2px 0 1px var(--line)}
+.swp nav a.cta svg{display:none}
 
 .swp #cur,.swp #ping{position:fixed;left:0;top:0;z-index:50;pointer-events:none;border-radius:50%;display:none}
 html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
@@ -108,7 +116,8 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
 .swp .logo{top:26px;font-size:22px}.swp .logo svg{width:20px;height:23px}
   .swp nav{top:30px;gap:16px}
   .swp nav a{font-size:9.5px;letter-spacing:.1em}
-  .swp nav a:nth-child(n+3){display:none}
+  .swp nav a.hm{display:none}
+  .swp nav a.cta{padding:8px 14px 7px}
   .swp .rates{left:12px;right:12px;bottom:14px;justify-content:center;padding:8px 10px 7px;font-size:8.5px;gap:5px 10px;border-radius:16px}
   .swp .scrollhint{display:none}
 }
@@ -120,7 +129,7 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
 .swp .sec-head h2,.swp .cta h2{margin-top:18px;font-size:64px;line-height:.95}
 .swp .intro{margin-top:24px;font:400 22px/1.5 "EB Garamond",serif;max-width:36em}
 .swp .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
-.swp .ink-card{position:relative;border:3px solid var(--line);border-radius:28px;background:#ece7d8;padding:30px 30px 32px;box-shadow:0 8px 0 -1px var(--paper),0 8px 0 2px var(--line)}
+.swp .ink-card{position:relative;border:3px solid var(--line);border-radius:28px;background:var(--card);padding:30px 30px 32px;box-shadow:0 8px 0 -1px var(--paper),0 8px 0 2px var(--line)}
 .swp .ink-card.flat{padding:26px 28px 28px}
 .swp .ink-card .icon{display:block;color:var(--line);margin-bottom:18px}
 .swp .ink-card h3{font:400 32px/1 "Goudy Bookletter 1911",serif;letter-spacing:-.04em;text-transform:uppercase}
@@ -131,14 +140,14 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
 .swp .step .num{position:absolute;right:24px;top:20px;font:500 40px/1 "EB Garamond",serif;letter-spacing:-.04em;opacity:.35}
 .swp .step .tag{display:inline-block;margin-bottom:14px;font:700 10.5px/1 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase;border:2px solid var(--line);border-radius:999px;padding:7px 10px 6px}
 .swp .flow{list-style:none;display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin-bottom:36px}
-.swp .flow li{position:relative;padding:20px 26px 20px 18px;border:3px solid var(--line);border-right:0;background:#ece7d8;min-height:108px}
+.swp .flow li{position:relative;padding:20px 26px 20px 18px;border:3px solid var(--line);border-right:0;background:var(--card);min-height:108px}
 .swp .flow li:first-child{border-radius:24px 0 0 24px}
 .swp .flow li:last-child{border-right:3px solid var(--line);border-radius:0 24px 24px 0;background:var(--line);color:var(--paper)}
-.swp .flow li:not(:last-child)::after{content:"";position:absolute;right:-12px;top:50%;z-index:1;width:20px;height:20px;margin-top:-10px;border-top:3px solid var(--line);border-right:3px solid var(--line);background:#ece7d8;transform:rotate(45deg)}
+.swp .flow li:not(:last-child)::after{content:"";position:absolute;right:-12px;top:50%;z-index:1;width:20px;height:20px;margin-top:-10px;border-top:3px solid var(--line);border-right:3px solid var(--line);background:var(--card);transform:rotate(45deg)}
 .swp .flow b{display:block;font:400 24px/1.05 "Goudy Bookletter 1911",serif;letter-spacing:-.03em;text-transform:uppercase}
 .swp .flow span{display:block;margin-top:10px;font:700 10.5px/1.45 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase}
 .swp .cre-row{display:grid;grid-template-columns:1.25fr 1fr;gap:26px;align-items:start}
-.swp .term{margin:0;padding:26px 28px;border-radius:24px;background:var(--ink);color:#efe9d9;font:500 14px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-x:auto;box-shadow:0 8px 0 -1px var(--paper),0 8px 0 2px var(--line)}
+.swp .term{margin:0;padding:26px 28px;border-radius:24px;background:var(--ink);color:var(--on-ink);font:500 14px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-x:auto;box-shadow:0 8px 0 -1px var(--paper),0 8px 0 2px var(--line)}
 .swp .facts{list-style:none;display:grid;gap:14px}
 .swp .facts li{position:relative;padding-left:30px;font:400 19px/1.5 "EB Garamond",serif}
 .swp .facts li::before{content:"";position:absolute;left:2px;top:.55em;width:14px;height:7px;border-left:3px solid var(--line);border-bottom:3px solid var(--line);transform:rotate(-45deg)}
@@ -153,7 +162,83 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
 .swp .pill.ghost{background:transparent}
 .swp .foot{display:flex;justify-content:space-between;gap:20px;padding:26px 0 40px;border-top:3px solid var(--line);font:700 11px/1.5 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase}
 
+.swp .idx{display:grid;grid-template-columns:repeat(3,1fr);gap:0 26px;padding:70px 0 10px}
+.swp .idx a{display:flex;gap:16px;align-items:baseline;padding:15px 2px 13px;border-bottom:2px dashed var(--line);font:400 21px/1.2 "EB Garamond",serif;transition:padding .2s}
+.swp .idx a:hover{padding-left:10px}
+.swp .idx a span{font:700 11px/1 "Open Sans",sans-serif;letter-spacing:.14em;opacity:.55}
+.swp .ink-card .tag,.swp .ch-card .tag{display:inline-block;font:700 10.5px/1 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase;border:2px solid var(--line);border-radius:999px;padding:7px 10px 6px}
+.swp .prob h3{margin-top:18px;font-size:44px}
+.swp .prob .viz{margin:20px 0 4px;border:2px solid var(--line);border-radius:18px;background:var(--paper);padding:14px}
+.swp .prob .viz svg{display:block;width:100%;height:auto;fill:none;stroke:var(--line);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.swp .prob .viz .hot{stroke:var(--c-red)}
+.swp .formula{margin-top:16px;padding:12px 14px;border-radius:14px;border:2px dashed var(--line);text-align:center;font-size:19px;overflow-x:auto;overflow-y:hidden}
+.swp .formula.big{font-size:22px;padding:16px 14px}
+.swp .formula .katex-display{margin:0}
+.swp .abc{list-style:none;margin-top:16px;border-top:2px dashed var(--line)}
+.swp .abc li{display:flex;gap:14px;padding:11px 0 10px;border-bottom:2px dashed var(--line);font:400 17.5px/1.4 "EB Garamond",serif}
+.swp .abc li span{font:700 11px/1.6 "Open Sans",sans-serif;letter-spacing:.1em;opacity:.55}
+.swp .math-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px}
+.swp .grid3>*,.swp .math-grid>*,.swp .charts>*,.swp .ch-split>*{min-width:0}
+.swp .eq h3{margin-top:16px}
+.swp .eq p{font-size:17.5px}
+.swp .charts{display:grid;gap:30px}
+.swp .ch-card{margin:0;border:3px solid var(--line);border-radius:28px;background:var(--card);padding:28px 30px 26px;box-shadow:0 8px 0 -1px var(--paper),0 8px 0 2px var(--line)}
+.swp .ch-head{max-width:46em}
+.swp .ch-title{font:400 30px/1 "Goudy Bookletter 1911",serif;letter-spacing:-.03em;text-transform:uppercase}
+.swp .ch-title.small{font-size:22px}
+.swp .ch-sub{margin-top:10px;font:400 17px/1.45 "EB Garamond",serif;opacity:.8}
+.swp .ch-card svg{display:block;width:100%;height:auto;margin-top:18px}
+.swp .ch-grid{stroke:var(--line);stroke-opacity:.18;stroke-dasharray:4 5}
+.swp .ch-tick{font:400 15px "EB Garamond",serif;fill:var(--ink);opacity:.7}
+.swp .ch-axis{font:700 10px "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase;fill:var(--ink);opacity:.6}
+.swp .ch-cursor{stroke:var(--line);stroke-width:1.5;stroke-dasharray:2 4}
+.swp .ch-controls{display:flex;flex-wrap:wrap;gap:16px 26px;align-items:center;margin-top:20px}
+.swp .ch-tabs{display:inline-flex;gap:4px;padding:4px;border:2px solid var(--line);border-radius:999px;background:var(--paper)}
+.swp .ch-tabs button{font:600 13.5px/1 "Josefin Sans",sans-serif;text-transform:uppercase;padding:11px 16px 8px;border:0;border-radius:999px;background:transparent;color:var(--ink);cursor:pointer}
+.swp .ch-tabs button[aria-checked=true]{background:var(--ink);color:var(--on-ink)}
+.swp .ch-slider{display:flex;flex-direction:column;gap:8px;min-width:260px;flex:1;max-width:420px;font:700 11px/1 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.swp .ch-slider b{font:500 20px/1 "EB Garamond",serif;letter-spacing:0;text-transform:none}
+.swp .ch-slider input{width:100%;accent-color:var(--ink);cursor:pointer}
+.swp .ch-split{display:grid;grid-template-columns:1.7fr 1fr;gap:28px;align-items:start}
+.swp .ch-side{margin-top:18px;padding:20px 20px 18px;border:2px solid var(--line);border-radius:20px;background:var(--paper)}
+.swp .ch-side .ch-tabs{margin-top:14px}
+.swp .ch-side .ch-tabs button{padding:9px 12px 7px;font-size:12px}
+.swp .ch-note{margin-top:10px;font:400 16px/1.45 "EB Garamond",serif}
+.swp .ch-read{display:grid;grid-template-columns:repeat(4,1fr);gap:0 22px;margin-top:20px;border-top:2px dashed var(--line)}
+.swp .ch-read div{padding:13px 0 0}
+.swp .ch-read dt{display:flex;align-items:center;gap:8px;font:700 10.5px/1.35 "Open Sans",sans-serif;letter-spacing:.1em;text-transform:uppercase}
+.swp .ch-read dt i{flex:none;width:16px;height:4px;border-radius:2px}
+.swp .ch-read dt small{margin-left:auto;font-size:10.5px;opacity:.6}
+.swp .ch-read dd{margin-top:6px;font:500 26px/1 "EB Garamond",serif}
+.swp .arch{display:grid;gap:10px;margin-top:40px;padding:26px;border:3px dashed var(--line);border-radius:28px}
+.swp .arch-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.swp .node{padding:16px 20px 15px;border:3px solid var(--line);border-radius:18px;background:var(--card)}
+.swp .node.strong{background:var(--ink);color:var(--on-ink)}
+.swp .node b{display:block;font:500 22px/1.1 "EB Garamond",serif;letter-spacing:-.01em;font-variant-numeric:lining-nums}
+.swp .node span{display:block;margin-top:6px;font:700 10.5px/1.45 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+.swp .arch-link{text-align:center;font:700 10.5px/1 "Open Sans",sans-serif;letter-spacing:.16em;text-transform:uppercase;opacity:.6}
+.swp .arch-link::after{content:"\2193";display:block;margin-top:4px;font-size:16px}
+.swp .versus-wrap{overflow-x:auto;border:3px solid var(--line);border-radius:28px;background:var(--card)}
+.swp .versus{width:100%;min-width:760px;border-collapse:collapse;font:400 17.5px/1.35 "EB Garamond",serif}
+.swp .versus th,.swp .versus td{padding:15px 18px;text-align:left;border-bottom:2px dashed var(--line);vertical-align:top}
+.swp .versus tr:last-child th,.swp .versus tr:last-child td{border-bottom:0}
+.swp .versus thead th{font:700 10.5px/1.3 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.swp .versus tbody th{font-weight:500}
+.swp .versus .us,.swp .versus thead th:last-child{background:var(--ink);color:var(--on-ink)}
+.swp .refs{list-style:none;border-top:2px dashed var(--line)}
+.swp .refs li{display:grid;grid-template-columns:70px 130px 1fr;gap:14px;align-items:baseline;padding:15px 0 13px;border-bottom:2px dashed var(--line);font:400 19px/1.35 "EB Garamond",serif}
+.swp .refs li span{font:700 11px/1 "Open Sans",sans-serif;letter-spacing:.1em;opacity:.55}
+.swp .refs a{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
+.swp .addr{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.swp .addr a{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:16px 20px;border:3px solid var(--line);border-radius:18px;background:var(--card);transition:transform .2s}
+.swp .addr a:hover{transform:translateY(2px)}
+.swp .addr b{font:400 21px/1.1 "Goudy Bookletter 1911",serif}
+.swp .addr span{grid-column:1;font:700 10px/1.4 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase;opacity:.7}
+.swp .addr code{grid-column:2;grid-row:1/3;align-self:center;font:500 13px ui-monospace,SFMono-Regular,Menlo,monospace}
+
 @media (max-width:1100px){
+  .swp .ch-split{grid-template-columns:1fr}
+  .swp .idx{grid-template-columns:repeat(2,1fr)}
   .swp .steps{grid-template-columns:repeat(2,1fr)}
   .swp .flow{grid-template-columns:repeat(3,1fr);row-gap:14px}
   .swp .flow li{border-right:3px solid var(--line);border-radius:20px !important;margin-right:14px}
@@ -161,6 +246,21 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
   .swp .cre-row{grid-template-columns:1fr}
 }
 @media (max-width:760px){
+  .swp .ch-side .ch-tick{font-size:14px}
+  .swp .ch-tick{font-size:26px}
+  .swp .ch-axis{font-size:18px}
+  .swp .idx{grid-template-columns:1fr;padding-top:40px}
+  .swp .math-grid,.swp .arch-row,.swp .addr{grid-template-columns:1fr}
+  .swp .prob h3{font-size:36px}
+  .swp .ch-card{padding:22px 18px 20px;border-radius:22px}
+  .swp .ch-title{font-size:24px}
+  .swp .ch-read{grid-template-columns:1fr 1fr}
+  .swp .ch-read dd{font-size:22px}
+  .swp .formula.big{font-size:17px}
+  .swp .arch{padding:16px;border-radius:22px}
+  .swp .refs li{grid-template-columns:44px 1fr;font-size:17px}
+  .swp .refs li a{grid-column:2}
+  .swp .versus-wrap{border-radius:22px}
   .swp .story{padding:10px 18px 0}
   .swp .sec{padding:80px 0 20px}
   .swp .sec-head h2,.swp .cta h2{font-size:42px}

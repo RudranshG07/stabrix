@@ -4,12 +4,17 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { RequireDeployment, useMaybeStabrix, useOracleStatus, useStabrix } from '@/lib/stabrix'
+import { DEV_ACCOUNTS } from '@/lib/config'
 import { AccountMenu } from './account-menu'
+import { ThemeToggle } from './theme-toggle'
 
 const NAV = [
   { href: '/swap', label: 'Swap' },
   { href: '/liquidity', label: 'Liquidity' },
+  { href: '/pool', label: 'Pool' },
+  { href: '/activity', label: 'Activity' },
   { href: '/lab', label: 'Depeg' },
+  { href: '/docs', label: 'Docs' },
 ]
 
 export function AnchorMark({ className = 'h-[26px] w-[22px]' }: { className?: string }) {
@@ -37,15 +42,15 @@ function NetworkPill() {
 
 function Nav({ path, className }: { path: string; className: string }) {
   return (
-    <nav aria-label="Primary" className={`items-center gap-7 ${className}`}>
-      {NAV.map((n) => {
+    <nav aria-label="Primary" className={`items-center ${className}`}>
+      {NAV.filter((n) => DEV_ACCOUNTS || n.href !== '/lab').map((n) => {
         const active = path.startsWith(n.href)
         return (
           <Link
             key={n.href}
             href={n.href}
             aria-current={active ? 'page' : undefined}
-            className={`relative py-2 text-[12px] font-bold tracking-[0.17em] whitespace-nowrap uppercase transition-opacity ${
+            className={`relative py-2 text-[12px] font-bold tracking-[0.1em] whitespace-nowrap uppercase sm:tracking-[0.17em] transition-opacity ${
               active ? 'opacity-100' : 'opacity-60 hover:opacity-100'
             }`}
           >
@@ -70,16 +75,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             <AnchorMark />
             <span className="font-display text-[27px] tracking-[-0.03em]">Stabrix</span>
           </Link>
-          <Nav path={path} className="hidden md:flex" />
+          <Nav path={path} className="hidden gap-7 lg:flex" />
           <div className="ml-auto flex items-center gap-3">
             {ctx && <NetworkPill />}
+            <ThemeToggle className="grid size-10 shrink-0 place-items-center rounded-full border-2 border-surface-line bg-surface transition-colors hover:bg-surface-hover [&>svg]:size-4" />
             {ctx && <AccountMenu />}
           </div>
         </div>
-        <Nav path={path} className="flex justify-center border-t-2 border-dashed border-line px-3 py-1.5 md:hidden" />
+        <Nav path={path} className="flex gap-3 overflow-x-auto border-t-2 border-dashed border-line px-2.5 py-1.5 sm:justify-center sm:gap-7 lg:hidden" />
       </header>
       <main className="mx-auto max-w-6xl px-4 pt-12 pb-24 sm:px-6">
-        <RequireDeployment>{children}</RequireDeployment>
+        {path === '/docs' ? children : <RequireDeployment>{children}</RequireDeployment>}
       </main>
       <footer className="border-t-[3px] border-surface-line">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-[10.5px] font-bold tracking-[0.14em] uppercase sm:px-6">

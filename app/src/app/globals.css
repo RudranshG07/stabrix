@@ -40,6 +40,28 @@
   --font-pill: var(--font-josefin), var(--font-open), sans-serif;
 }
 
+:root[data-theme='dark'] {
+  --color-paper: #14120e;
+  --color-surface: #1d1a15;
+  --color-surface-hover: #27231c;
+  --color-surface-line: #e6e0cf;
+  --color-line: #4d4638;
+  --color-ink: #ece6d4;
+  --color-muted: #a99f88;
+  --color-accent: #ece6d4;
+  --color-accent-hover: #d8d1bd;
+  --color-on-accent: #16130e;
+  --color-accent-text: #e3a843;
+  --color-series-lime: #e3a843;
+  --color-grid: #2b2720;
+  --color-grid-strong: #4d4638;
+  --color-violet: #9db0e0;
+  --color-violet-soft: #7f90bd;
+  --color-up: #5cc07a;
+  --color-down: #e0705c;
+  color-scheme: dark;
+}
+
 @layer base {
   html {
     color-scheme: light;
