@@ -1,6 +1,12 @@
-import { TwoScene } from '@/components/landing/two-scene'
-import './landing.css'
+import { Saltwake } from '@/components/landing/saltwake'
+import { Story } from '@/components/landing/story'
+import './saltwake.css'
 
 export default function Landing() {
-  return <TwoScene />
+  return (
+    <div className="swp">
+      <Saltwake />
+      <Story />
+    </div>
+  )
 }

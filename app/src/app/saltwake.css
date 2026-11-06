@@ -1,0 +1,178 @@
+.swp,html.sw{--paper:#e6e0cf;--ink:#201c15;--line:#16130e;--band:#d7d2c2;--band2:#dcd7c7}
+.swp *{box-sizing:border-box;margin:0;padding:0}
+html.sw{scroll-behavior:smooth}
+html.sw,html.sw body{background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
+html.sw body{overflow-x:hidden}
+.swp{background:var(--paper);color:var(--ink);font-variant-numeric:lining-nums}
+html.sw.fine,html.sw.fine *{cursor:none}
+.swp a{color:inherit;text-decoration:none}
+
+.swp .hero{height:300vh;position:relative}
+.swp .frame{position:sticky;top:14px;margin:14px 14px 0;height:calc(100dvh - 28px);border-radius:34px;overflow:hidden;background:var(--paper);isolation:isolate}
+.swp .frame::after{content:"";position:absolute;inset:0;border:6px solid var(--line);border-radius:34px;pointer-events:none;z-index:30}
+.swp #shade{position:absolute;left:-12%;top:-12%;width:124%;height:124%;mix-blend-mode:multiply;opacity:.4;pointer-events:none;z-index:25;will-change:transform}
+
+.swp #scene{position:absolute;left:0;top:0;transform-origin:0 0}
+.swp #scene>*{position:absolute}
+.swp svg.w{left:0;top:0;overflow:visible;pointer-events:none}
+.swp svg.w path{vector-effect:none}
+
+.swp .spr{background-repeat:no-repeat;will-change:transform}
+.swp #ship{background-size:100% 100%;transform-origin:50% 100%}
+.swp #capt{transform-origin:45% 100%}
+.swp #palm{transform-origin:22% 100%;clip-path:polygon(0 0,100% 0,100% 61%,46% 61%,46% 100%,0 100%)}
+
+.swp .t1{left:150px;top:236px;width:640px;white-space:nowrap}
+.swp .t1 .eb{font:400 27px/1 "Sorts Mill Goudy",serif;letter-spacing:.2em;text-transform:uppercase}
+.swp h1,.swp h2{font-family:"Goudy Bookletter 1911","Sorts Mill Goudy",serif;font-weight:400;text-transform:uppercase;letter-spacing:-.045em}
+.swp h1{font-size:74px;line-height:.92;margin-top:24px}
+.swp .lede{margin-top:20px;font:700 13.5px/1.75 "Open Sans",sans-serif;letter-spacing:.13em;text-transform:uppercase}
+.swp .stamps{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.swp .stamps span{font:700 11px/1 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase;border:2px solid var(--line);border-radius:999px;padding:8px 12px 7px;background:#ece7d8}
+.swp .pill{display:inline-block;position:relative;font:600 19px/1 "Josefin Sans",sans-serif;text-transform:uppercase;letter-spacing:.01em;
+  border:3px solid var(--line);border-radius:999px;background:#ece7d8;box-shadow:0 7px 0 -1px var(--paper),0 7px 0 2px var(--line);transition:transform .25s,box-shadow .25s}
+.swp .pill:hover{transform:translateY(3px);box-shadow:0 4px 0 -1px var(--paper),0 4px 0 2px var(--line)}
+.swp .t1 .pill{margin-top:30px;padding:21px 62px 17px}
+.swp .ccoin svg{display:block;width:100%;height:100%}
+.swp .pennant{position:absolute;transform-origin:100% 50%;animation:swflag 2.6s ease-in-out infinite}
+.swp .pennant .pfab{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.swp .pennant .panchor{position:absolute;left:30%;top:14%;height:72%;width:auto}
+@keyframes swflag{0%,100%{transform:skewY(-3deg) scaleX(1)}50%{transform:skewY(3deg) scaleX(.96)}}
+@media (prefers-reduced-motion:reduce){.swp .pennant{animation:none}}
+.swp #chest .cpart{position:absolute;inset:0;background-repeat:no-repeat}
+.swp #chest .cbody{clip-path:inset(46% 0 0 0)}
+.swp #chest .clid{clip-path:inset(0 0 54% 0)}
+.swp #chest .copen{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.swp #chest .ccoin{position:absolute;width:27%;aspect-ratio:1;opacity:0}
+.swp #chest .slip{position:absolute;left:50%;top:-34%;padding:7px 12px 6px;background:#f5efdc;border:2.5px solid var(--line);border-radius:6px;font:400 17px/1.05 "Goudy Bookletter 1911",serif;letter-spacing:-.02em;text-align:center;white-space:nowrap;opacity:0;box-shadow:3px 4px 0 rgba(22,19,14,.25)}
+.swp.portrait #chest .slip{font-size:19px}
+.swp .rates{position:absolute;left:6.6%;bottom:24px;z-index:20;display:flex;align-items:center;gap:6px 18px;flex-wrap:wrap;padding:10px 16px 9px;border:2px solid var(--line);border-radius:999px;background:#ece7d8;font:700 10.5px/1 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.swp .rates b{font-weight:700;letter-spacing:.04em;margin-left:4px}
+.swp .rates .live{display:flex;align-items:center;gap:7px}
+.swp .rates .live i{width:7px;height:7px;border-radius:50%;background:#2f8f4e;box-shadow:0 0 0 0 rgba(47,143,78,.5);animation:swlive 2s ease-out infinite}
+@keyframes swlive{0%{box-shadow:0 0 0 0 rgba(47,143,78,.55)}100%{box-shadow:0 0 0 8px rgba(47,143,78,0)}}
+@media (prefers-reduced-motion:reduce){.swp .rates .live i{animation:none}}
+.swp .scrollhint{position:absolute;right:5.4%;bottom:26px;z-index:20;font:700 11px/1 "Open Sans",sans-serif;letter-spacing:.2em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:10px}
+.swp .scrollhint i{display:block;width:3px;height:26px;border-radius:2px;background:var(--line);animation:swdrop 1.6s ease-in-out infinite}
+@keyframes swdrop{0%{transform:scaleY(0);transform-origin:top}45%{transform:scaleY(1);transform-origin:top}55%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+@media (prefers-reduced-motion:reduce){.swp .scrollhint i{animation:none}}
+.swp .t2{left:1000px;top:462px;width:520px}
+.swp h2{font-size:72px;line-height:.98}
+.swp .t2 p{margin-top:22px;font:700 14.5px/1.72 "Open Sans",sans-serif;letter-spacing:.13em;text-transform:uppercase}
+.swp .btnw{display:inline-block;position:relative;margin-top:30px}
+.swp .t2 .pill{font-size:16px;padding:15px 38px 12px}
+.swp .tick{position:absolute;top:-15px;width:22px;height:4px;border-radius:2px;background:var(--line)}
+.swp .tick.a{left:-30px;transform:rotate(24deg)}.swp .tick.b{left:-16px;top:-23px;width:13px;transform:rotate(58deg)}.swp .tick.c{right:-30px;transform:rotate(-30deg)}
+
+.swp .note{white-space:nowrap;opacity:0;pointer-events:none}
+.swp .note b{display:block;font:400 30px/1 "Goudy Bookletter 1911",serif;letter-spacing:-.035em}
+.swp .note span{display:block;margin-top:7px;font:700 10.5px/1.4 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase}
+.swp.portrait .note b{font-size:36px}
+.swp.portrait .note span{font-size:13px}
+.swp .note .sub-port,.swp.portrait .note .sub-land{display:none}
+.swp.portrait .note .sub-port{display:block}
+.swp .logo{position:absolute;left:6.6%;top:58px;z-index:20;display:flex;align-items:center;gap:9px;font:400 30px/1 "Goudy Bookletter 1911",serif;letter-spacing:-.03em}
+.swp .logo svg{width:26px;height:30px}
+.swp nav{position:absolute;right:5.4%;top:62px;z-index:20;display:flex;gap:clamp(34px,6.6vw,104px)}
+.swp nav a{position:relative;font:700 12.5px/1 "Open Sans",sans-serif;letter-spacing:.17em;text-transform:uppercase;padding:6px 0}
+.swp nav a svg{position:absolute;left:100%;top:-4px;margin-left:7px;width:17px;height:21px;opacity:0;transform:translateY(-10px) rotate(-30deg);transform-origin:50% 0;transition:opacity .2s,transform .55s cubic-bezier(.3,1.9,.5,1)}
+.swp nav a:hover svg{opacity:1;transform:none}
+
+.swp #cur,.swp #ping{position:fixed;left:0;top:0;z-index:50;pointer-events:none;border-radius:50%;display:none}
+html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
+.swp #cur{width:var(--ring,40px);height:var(--ring,40px);margin:calc(var(--ring,40px)/-2);border:5px solid var(--line)}
+.swp #ping{width:var(--ring,40px);height:var(--ring,40px);margin:calc(var(--ring,40px)/-2);border:1.5px solid var(--line);opacity:0}
+
+.swp.portrait .t1{left:60px;top:150px;width:680px;white-space:normal}
+.swp.portrait #shade{opacity:.26}
+.swp.portrait h1{font-size:72px}
+.swp.portrait .lede{font-size:20px}
+.swp.portrait .lede br{display:none}
+.swp.portrait .stamps span{font-size:16px;padding:11px 16px 10px}
+.swp.portrait .t1 .eb{font-size:32px}
+.swp.portrait .t1 .pill{font-size:26px;padding:27px 74px 22px}
+.swp.portrait .t2{left:64px;top:1036px;width:680px}
+.swp.portrait h2{font-size:96px}
+.swp.portrait .t2 p{font-size:21px}
+.swp.portrait .t2 .pill{font-size:24px;padding:22px 52px 18px}
+@media (max-width:760px){
+  .swp .frame,.swp .frame::after{border-radius:22px}
+  .swp .frame{top:8px;margin:8px 8px 0;height:calc(100dvh - 16px)}
+  .swp .note{white-space:nowrap;opacity:0;pointer-events:none}
+.swp .note b{display:block;font:400 30px/1 "Goudy Bookletter 1911",serif;letter-spacing:-.035em}
+.swp .note span{display:block;margin-top:7px;font:700 10.5px/1.4 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase}
+.swp.portrait .note b{font-size:36px}
+.swp.portrait .note span{font-size:13px}
+.swp .note .sub-port,.swp.portrait .note .sub-land{display:none}
+.swp.portrait .note .sub-port{display:block}
+.swp .logo{top:26px;font-size:22px}.swp .logo svg{width:20px;height:23px}
+  .swp nav{top:30px;gap:16px}
+  .swp nav a{font-size:9.5px;letter-spacing:.1em}
+  .swp nav a:nth-child(n+3){display:none}
+  .swp .rates{left:12px;right:12px;bottom:14px;justify-content:center;padding:8px 10px 7px;font-size:8.5px;gap:5px 10px;border-radius:16px}
+  .swp .scrollhint{display:none}
+}
+
+.swp .story{position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:40px 32px 0;font-feature-settings:"lnum" 1,"pnum" 1}
+.swp .sec{padding:120px 0 40px}
+.swp .sec-head{max-width:820px;margin-bottom:46px}
+.swp .sec-head .eb{font:400 22px/1 "EB Garamond",serif;letter-spacing:.2em;text-transform:uppercase}
+.swp .sec-head h2,.swp .cta h2{margin-top:18px;font-size:64px;line-height:.95}
+.swp .intro{margin-top:24px;font:400 22px/1.5 "EB Garamond",serif;max-width:36em}
+.swp .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+.swp .ink-card{position:relative;border:3px solid var(--line);border-radius:28px;background:#ece7d8;padding:30px 30px 32px;box-shadow:0 8px 0 -1px var(--paper),0 8px 0 2px var(--line)}
+.swp .ink-card.flat{padding:26px 28px 28px}
+.swp .ink-card .icon{display:block;color:var(--line);margin-bottom:18px}
+.swp .ink-card h3{font:400 32px/1 "Goudy Bookletter 1911",serif;letter-spacing:-.04em;text-transform:uppercase}
+.swp .ink-card.flat h3{font-size:28px}
+.swp .ink-card p{margin-top:14px;font:400 18.5px/1.55 "EB Garamond",serif}
+.swp .steps{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+.swp .step{padding-top:26px}
+.swp .step .num{position:absolute;right:24px;top:20px;font:500 40px/1 "EB Garamond",serif;letter-spacing:-.04em;opacity:.35}
+.swp .step .tag{display:inline-block;margin-bottom:14px;font:700 10.5px/1 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase;border:2px solid var(--line);border-radius:999px;padding:7px 10px 6px}
+.swp .flow{list-style:none;display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin-bottom:36px}
+.swp .flow li{position:relative;padding:20px 26px 20px 18px;border:3px solid var(--line);border-right:0;background:#ece7d8;min-height:108px}
+.swp .flow li:first-child{border-radius:24px 0 0 24px}
+.swp .flow li:last-child{border-right:3px solid var(--line);border-radius:0 24px 24px 0;background:var(--line);color:var(--paper)}
+.swp .flow li:not(:last-child)::after{content:"";position:absolute;right:-12px;top:50%;z-index:1;width:20px;height:20px;margin-top:-10px;border-top:3px solid var(--line);border-right:3px solid var(--line);background:#ece7d8;transform:rotate(45deg)}
+.swp .flow b{display:block;font:400 24px/1.05 "Goudy Bookletter 1911",serif;letter-spacing:-.03em;text-transform:uppercase}
+.swp .flow span{display:block;margin-top:10px;font:700 10.5px/1.45 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.swp .cre-row{display:grid;grid-template-columns:1.25fr 1fr;gap:26px;align-items:start}
+.swp .term{margin:0;padding:26px 28px;border-radius:24px;background:var(--ink);color:#efe9d9;font:500 14px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-x:auto;box-shadow:0 8px 0 -1px var(--paper),0 8px 0 2px var(--line)}
+.swp .facts{list-style:none;display:grid;gap:14px}
+.swp .facts li{position:relative;padding-left:30px;font:400 19px/1.5 "EB Garamond",serif}
+.swp .facts li::before{content:"";position:absolute;left:2px;top:.55em;width:14px;height:7px;border-left:3px solid var(--line);border-bottom:3px solid var(--line);transform:rotate(-45deg)}
+.swp .numbers{display:grid;grid-template-columns:repeat(3,1fr);border-top:3px solid var(--line)}
+.swp .numbers div{padding:30px 26px 32px 0;border-bottom:3px solid var(--line)}
+.swp .numbers b{display:block;font:500 74px/.9 "EB Garamond",serif;letter-spacing:-.03em}
+.swp .numbers span{display:block;margin-top:14px;max-width:22em;font:700 11.5px/1.55 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.swp .note-line{margin-top:22px;font:400 18px/1.5 "EB Garamond",serif;font-style:italic}
+.swp .cta{text-align:center;padding:140px 0 120px}
+.swp .cta-row{display:flex;justify-content:center;gap:22px;margin-top:40px}
+.swp .cta .pill{padding:21px 52px 17px}
+.swp .pill.ghost{background:transparent}
+.swp .foot{display:flex;justify-content:space-between;gap:20px;padding:26px 0 40px;border-top:3px solid var(--line);font:700 11px/1.5 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase}
+
+@media (max-width:1100px){
+  .swp .steps{grid-template-columns:repeat(2,1fr)}
+  .swp .flow{grid-template-columns:repeat(3,1fr);row-gap:14px}
+  .swp .flow li{border-right:3px solid var(--line);border-radius:20px !important;margin-right:14px}
+  .swp .flow li::after{display:none}
+  .swp .cre-row{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  .swp .story{padding:10px 18px 0}
+  .swp .sec{padding:80px 0 20px}
+  .swp .sec-head h2,.swp .cta h2{font-size:42px}
+  .swp .sec-head h2 br{display:none}
+  .swp .sec-head .eb{font-size:16px}
+  .swp .intro{font-size:19px}
+  .swp .grid3,.swp .steps,.swp .numbers{grid-template-columns:1fr}
+  .swp .flow{grid-template-columns:1fr 1fr}
+  .swp .flow li{margin-right:10px}
+  .swp .numbers b{font-size:60px}
+  .swp .term{font-size:12px;padding:20px}
+  .swp .cta{padding:90px 0 80px}
+  .swp .cta-row{flex-direction:column;align-items:center}
+  .swp .foot{flex-direction:column}
+}

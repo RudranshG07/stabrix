@@ -14,4 +14,4 @@ coverage/
 deployments/base-fork*.json
 *.tsbuildinfo
 next-env.d.ts
-.next-verify/
+.next-*/
