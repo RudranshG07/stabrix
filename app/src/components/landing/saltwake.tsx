@@ -3,11 +3,9 @@
 import { useEffect } from 'react'
 import { LiveRates } from './live-rates'
 
-const P =
-  'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_'
-const SHIP = P + '20261031_024714_39df675e-5060-4528-87dc-9d0c274815aa.png&w=1600&q=90'
-const CAPT = P + '20261031_024703_a0298b6a-0117-47f1-8462-4be671d0407e.png&w=2048&q=90'
-const PLANTS = P + '20261031_024704_3ccf1ac2-bec7-4fdb-bfce-ac19eca8db28.png&w=2048&q=90'
+const SHIP = '/landing/ship.webp'
+const CAPT = '/landing/captain.webp'
+const PLANTS = '/landing/plants.webp'
 const FONTS =
   'https://fonts.googleapis.com/css2?family=Goudy+Bookletter+1911&family=Sorts+Mill+Goudy&family=Josefin+Sans:wght@600&family=Open+Sans:wght@700&display=swap'
 

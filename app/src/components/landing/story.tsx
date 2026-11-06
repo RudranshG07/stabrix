@@ -107,7 +107,7 @@ const STEPS = [
     icon: ICONS.orbit,
     tag: 'SwapVM opcode 34',
     title: 'One curve, eight coins',
-    text: "Paradigm's Orbital sphere prices USDC, USDT, DAI, USDS, USDe, EURC, BRZ and IDRX on one curve, as a new SwapVM instruction with one square root per swap.",
+    text: "Sphere AMM math from Paradigm's research prices USDC, USDT, DAI, USDS, USDe, EURC, BRZ and IDRX on one curve, as a new SwapVM instruction with one square root per swap.",
   },
   {
     icon: ICONS.glass,
@@ -119,7 +119,7 @@ const STEPS = [
     icon: ICONS.chest,
     tag: 'SwapVM opcode 35',
     title: 'When a coin breaks',
-    text: 'CRE halts it on every range. Your backstop buys it 2 to 10% below market, paid from the same wallet balance that runs your FX range.',
+    text: 'CRE halts it on every range. Your backstop buys it at a discount you choose below market, paid from the same wallet balance that runs your FX range.',
   },
 ]
 
@@ -130,7 +130,7 @@ const AQUA = [
   },
   {
     title: 'Two new instructions',
-    text: 'StabrixTick (opcode 34) prices the Orbital curve. StabrixBackstop (opcode 35) buys a depegged coin only while Chainlink says it is broken.',
+    text: 'StabrixTick (opcode 34) prices the sphere curve. StabrixBackstop (opcode 35) buys a depegged coin only while Chainlink says it is broken.',
   },
   {
     title: 'Your official router',
@@ -160,13 +160,13 @@ const FLOW = [
 ]
 
 const LOG = [
-  '$ cre workflow simulate depeg-sentinel --target fork-settings --broadcast',
-  '✓ Workflow compiled',
-  'USDe  api 0.93      halt  offchain 700bps >= hard 300bps',
-  'EURC  feed 1.11689  push  first FX rate',
-  'BRZ   ref 0.18167   push  first FX rate',
-  'IDRX  ref 0.0000553 push  first FX rate',
-  'oracle updated  tx 0x030c385b…ab9fa5dc4',
+  '$ cre workflow simulate depeg-sentinel -T fork-settings --broadcast',
+  'EURC ref=1.116385 feed=1.117162 api=1.038238',
+  '     halt=true  offchain 700bps >= hard 300bps',
+  'USDe feed=0.998752  halt=false  back within resume band',
+  'BRZ  ref=0.181687   halt=false  within peg',
+  'oracle updated  pushed [USDe:false EURC:true BRZ:false IDRX:false]',
+  'tx 0x3c298e53…bd63e5dc',
 ]
 
 const CRE_FACTS = [
@@ -178,8 +178,8 @@ const CRE_FACTS = [
 
 const NUMBERS = [
   ['0.13%', 'cost of a 10,000 USDC to DAI swap, fees included'],
-  ['0.17%', 'cost of a 5,000 USDC to EURC swap, FX fee included'],
-  ['0', 'USDe bought at par by any range in the crash test'],
+  ['0.23%', 'cost of a 5,000 USDC to EURC swap, FX fee included'],
+  ['0', 'USDe bought by any range after the CRE halt'],
   ['+1.86%', 'backstop return from buying USDe at $0.93'],
   ['144', 'SDK tests, quotes equal to Solidity to the wei'],
   ['80', 'contract tests, 9 on official 1inch contracts on Base'],
