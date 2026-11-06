@@ -162,7 +162,7 @@ contract FxVectors is Script {
                 amountIn: (seed >> 16) % (3000 * 10 ** DECS[i] * 1e18 / face) + 1,
                 absorbedIn: (seed >> 80) % (5000 * 10 ** DECS[i] * 1e18 / face),
                 faceIn: face,
-                marketIn: face * (5000 + (seed >> 40) % 5000) / 10_000,
+                marketIn: face * (5000 + (seed >> 40) % 7000) / 10_000,
                 priceOut: _price(seed, j),
                 decimalsIn: DECS[i],
                 decimalsOut: DECS[j],

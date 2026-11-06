@@ -226,6 +226,15 @@ contract StabrixBackstopTest is FxFixture {
         assertEq(a, b);
     }
 
+    function test_NeverPaysAboveParForCoinAbovePeg() public {
+        (ISwapVM.Order memory order,) = shipBackstop(lp, bsConfig(200, 1000, 10_000), 10_000, 1);
+        usdeMarket.set(1.05e8, block.timestamp);
+        depeg(usde, 1.05e18);
+        uint256 out = swapIn(order, usde, usdc, 100 * W);
+        assertLe(out, 98e6, "priced at face value at most, minus the start discount");
+        assertApproxEqAbs(out, expected(100 * W, 1e18, 0, 200, 1000, 10_000 * W) / 1e12, 2);
+    }
+
     function testFuzz_SplitNeverBeatsWhole(uint256 amount, uint256 cut, uint16 marketBps) public {
         (ISwapVM.Order memory order,) = shipBackstop(lp, bsConfig(100, 1500, 10_000), 10_000, 1);
         depeg(usde, uint256(bound(marketBps, 5000, 9900)) * 1e14);

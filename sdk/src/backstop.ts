@@ -88,7 +88,8 @@ export function backstopOut(x: BackstopQuote): bigint {
   const span = BigInt(x.endBps - x.startBps)
   const twoCap = 2n * x.cap
   const discount = ceilDiv((BigInt(x.startBps) * twoCap + span * (2n * absorbed + incoming)) * BPS_TO_WAD, twoCap)
-  const valueOut = (x.amountIn * x.marketIn * (WAD - discount)) / (unitIn * WAD)
+  const market = x.marketIn < x.faceIn ? x.marketIn : x.faceIn
+  const valueOut = (x.amountIn * market * (WAD - discount)) / (unitIn * WAD)
   let out = (valueOut * 10n ** BigInt(x.decimalsOut)) / x.priceOut
   if (out <= 1n) throw new StabrixMathError('ZeroAmount')
   out -= 1n

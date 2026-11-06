@@ -9,8 +9,8 @@ import {StabrixBackstopConfig} from "./StabrixBackstopConfig.sol";
 import {IStabrixOracle} from "./interfaces/IStabrixOracle.sol";
 
 /// @notice Standby liquidity for depegs. Buys a token only while the oracle marks it depegged, pays only in
-/// healthy tokens, at the depeg market price minus a discount that grows linearly from start to end as the
-/// per-token cap fills. The maker's absorbed amount is its Aqua balance of that token.
+/// healthy tokens, at the depeg market price (never above face value) minus a discount that grows linearly from
+/// start to end as the per-token cap fills. The maker's absorbed amount is its Aqua balance of that token.
 library StabrixBackstopPricing {
     uint256 internal constant WAD = 1e18;
     uint256 internal constant BPS_TO_WAD = 1e14;
@@ -84,7 +84,8 @@ library StabrixBackstopPricing {
         uint256 discount =
             _ceilDiv((uint256(x.startBps) * twoCap + span * (2 * absorbed + incoming)) * BPS_TO_WAD, twoCap);
 
-        uint256 valueOut = x.amountIn * x.marketIn * (WAD - discount) / (unitIn * WAD);
+        uint256 market = x.marketIn < x.faceIn ? x.marketIn : x.faceIn;
+        uint256 valueOut = x.amountIn * market * (WAD - discount) / (unitIn * WAD);
         out = valueOut * 10 ** x.decimalsOut / x.priceOut;
         if (out <= 1) revert ZeroAmount();
         out -= 1;
