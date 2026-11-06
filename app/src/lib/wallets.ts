@@ -31,7 +31,8 @@ export function useWalletOptions(): WalletOption[] {
       const { info, provider } = (event as CustomEvent<Announcement>).detail
       const id = info.rdns || info.uuid
       if (found.has(id)) return
-      found.set(id, { id, name: info.name, icon: info.icon, provider })
+      const icon = typeof info.icon === 'string' ? info.icon.trim() : ''
+      found.set(id, { id, name: info.name, icon: icon.startsWith('data:image/') ? icon : undefined, provider })
       setOptions([...found.values()])
     }
     window.addEventListener('eip6963:announceProvider', onAnnounce)

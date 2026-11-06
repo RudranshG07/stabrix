@@ -1,7 +1,6 @@
 'use client'
 
 import { ArrowUpRight, ChevronDown, Loader2, Wallet } from 'lucide-react'
-import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { privateKeyToAccount } from 'viem/accounts'
 import { SEPOLIA_FAUCET, useTestCoins } from '@/components/test-coins'
@@ -15,7 +14,7 @@ const heading = 'px-2.5 pt-1.5 pb-1 text-[10px] font-medium tracking-[0.08em] te
 
 function WalletIcon({ option }: { option: WalletOption }) {
   if (!option.icon) return <Wallet className="size-5 shrink-0 text-muted" aria-hidden />
-  return <Image src={option.icon} alt="" width={20} height={20} unoptimized className="size-5 shrink-0 rounded-md" />
+  return <img src={option.icon} alt="" width={20} height={20} className="size-5 shrink-0 rounded-md" />
 }
 
 export function AccountMenu() {
