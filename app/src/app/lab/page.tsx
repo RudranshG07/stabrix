@@ -194,7 +194,7 @@ export default function LabPage() {
   return (
     <div className="space-y-12">
       <SectionHead
-        index="Stabrix · 03"
+        index="Stabrix · 05"
         title="Depeg"
         aside={
           <p className="font-serif max-w-sm text-[17px] leading-snug text-muted sm:text-right">

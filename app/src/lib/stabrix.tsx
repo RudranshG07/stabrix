@@ -18,6 +18,7 @@ import {
   http,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
+import { fetchActivity } from './activity'
 import { ANVIL_ACCOUNTS, DEV_ACCOUNTS, POLL_MS, PRICE_API, RPC_URL } from './config'
 
 export type Wallet = WalletClient<Transport, Chain, Account>
@@ -205,6 +206,11 @@ export function useMarket() {
 export function useOracleStatus() {
   const { client } = useStabrix()
   return useQuery({ queryKey: ['oracle-status'], queryFn: () => client.oracleStatus(), refetchInterval: POLL_MS })
+}
+
+export function useActivity() {
+  const { deployment, publicClient } = useStabrix()
+  return useQuery({ queryKey: ['activity', deployment.batchTaker], queryFn: () => fetchActivity(publicClient, deployment), refetchInterval: POLL_MS * 2 })
 }
 
 export function useBalances(owner: Address | undefined) {

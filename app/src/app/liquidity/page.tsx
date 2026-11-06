@@ -1,12 +1,14 @@
 'use client'
 
-import { type Market, PRESETS, type PresetId, type TokenInfo, type Venue, edgeUtilization } from '@stabrix/sdk'
+import { type Market, PRESETS, type PresetId, type TokenInfo, type Venue } from '@stabrix/sdk'
+import { ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { OrbitMap } from '@/components/orbit-map'
+import { StrategyStatus, settingOf } from '@/components/strategies'
 import { TxStatus } from '@/components/tx-status'
 import { Button, COIN_TONES, CoinDot, KindTag, Label, Panel, SectionHead, Skeleton, VenueTag } from '@/components/ui'
 import { CURRENCY } from '@/lib/coins'
-import { formatAmount, formatUsd, shortAddress, toUnits } from '@/lib/format'
+import { formatAmount, formatUsd, toUnits } from '@/lib/format'
 import { priceOf } from '@/lib/market'
 import { useBalances, useMarket, useStabrix } from '@/lib/stabrix'
 import {
@@ -15,7 +17,6 @@ import {
   type LiveStrategy,
   backstopFill,
   isMine,
-  presetOf,
   shortCoins,
   strategyUsd,
   valueUsd,
@@ -386,7 +387,7 @@ function BackstopForm({ held, balances, market }: { held: TokenInfo[]; balances:
                 aria-checked={active}
                 onClick={() => setPreset(x.id)}
                 className={`rounded-[20px] border-2 border-surface-line p-4 text-left transition-[transform,box-shadow] ${
-                  active ? 'bg-[#f6c945] shadow-[0_4px_0_0_var(--color-surface-line)]' : 'bg-paper opacity-70 hover:opacity-100'
+                  active ? 'bg-[#f6c945] text-tone-ink shadow-[0_4px_0_0_var(--color-surface-line)]' : 'bg-paper opacity-70 hover:opacity-100'
                 }`}
               >
                 <span className={small}>{x.label}</span>
@@ -472,38 +473,6 @@ function WalletPanel({ market, balances, mine }: { market: Market | undefined; b
   )
 }
 
-function Meter({ used, label }: { used: number; label: string }) {
-  const pct = Math.max(0, Math.min(100, Math.round(used * 100)))
-  return (
-    <div className="flex items-center gap-2.5">
-      <div
-        className="h-2.5 w-28 overflow-hidden rounded-full border-2 border-surface-line bg-paper"
-        role="meter"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={pct}
-        aria-label={label}
-      >
-        <div className={`h-full ${used > 0.85 ? 'bg-down' : 'bg-ink'} transition-[width] duration-300`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="num text-[14px] text-muted">{pct}%</span>
-    </div>
-  )
-}
-
-function settingOf(s: LiveStrategy): string {
-  if (s.kind === 'backstop') return `${s.config.startDiscountBps / 100}% → ${s.config.endDiscountBps / 100}%`
-  const p = presetOf(s)
-  return p ? PRESETS.find((x) => x.id === p)!.label : 'Custom'
-}
-
-function statusOf(s: LiveStrategy, market: Market) {
-  if (s.kind === 'range') return <Meter used={edgeUtilization(s.balances, s.rates, s.range)} label="Share of the range edge used" />
-  const fill = backstopFill(s, market.prices)
-  if (fill.length === 0) return <span className="text-[12px] font-bold tracking-[0.1em] text-muted uppercase">Standing by</span>
-  return <Meter used={Math.max(...fill.map((f) => f.used))} label="Share of the backstop cap used" />
-}
-
 function StrategyCard({ s, market, onClose, busy }: { s: LiveStrategy; market: Market; onClose: () => void; busy: boolean }) {
   const { client } = useStabrix()
   const usd = strategyUsd(s, market.prices)
@@ -552,7 +521,7 @@ function StrategyCard({ s, market, onClose, busy }: { s: LiveStrategy; market: M
 
       <div className="rule my-4" />
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {statusOf(s, market)}
+        <StrategyStatus s={s} market={market} />
         <Button variant="ghost" size="sm" busy={busy} onClick={onClose}>
           Close
         </Button>
@@ -616,12 +585,16 @@ export default function LiquidityPage() {
 
         <div className="space-y-7 lg:col-span-5">
           <WalletPanel market={market.data} balances={balances.data} mine={mine} />
-          <Panel className="p-5 sm:p-6">
-            <Label>Orbit map</Label>
-            <div className="mt-4">
-              {market.isLoading ? <Skeleton className="aspect-square" /> : <OrbitMap ranges={market.data?.ranges ?? []} coins={deployment.tokens} />}
-            </div>
-          </Panel>
+          <Link href="/pool" className="ink-card flex items-center justify-between gap-4 p-5 transition-transform hover:translate-y-[2px] sm:p-6">
+            <span>
+              <span className="label">
+                <span className="size-2 shrink-0 rotate-45 border-2 border-current" aria-hidden />
+                The pool
+              </span>
+              <span className="font-serif mt-2 block text-[17px] text-muted">Every strategy, the reserve mix and the orbit map.</span>
+            </span>
+            <ArrowRight className="size-5 shrink-0" aria-hidden />
+          </Link>
         </div>
       </div>
 
@@ -645,50 +618,6 @@ export default function LiquidityPage() {
         <TxStatus state={close.state} />
       </section>
 
-      <section aria-labelledby="everyone" className="space-y-5">
-        <Label id="everyone">All strategies</Label>
-        <Panel className="overflow-x-auto">
-          <table className="w-full min-w-[680px]">
-            <thead>
-              <tr className="border-b-2 border-dashed border-line text-left">
-                {['Maker', 'Kind', 'Venue', 'Setting', 'Value', 'Status'].map((h) => (
-                  <th key={h} scope="col" className={`${small} px-5 py-3.5 text-muted`}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {market.data &&
-                all.map((s) => (
-                  <tr key={s.id} className="border-b-2 border-dashed border-line last:border-0">
-                    <td className="px-5 py-3 text-[12px] font-bold tracking-[0.04em]">
-                      {shortAddress(s.maker)}
-                      {isMine(s, signer?.address) && <span className="ml-2 text-muted">you</span>}
-                    </td>
-                    <td className="px-5 py-3">
-                      <KindTag kind={s.kind} />
-                    </td>
-                    <td className="px-5 py-3">
-                      <VenueTag kind={s.venue.kind} />
-                    </td>
-                    <td className="num px-5 py-3 text-[16px]">{settingOf(s)}</td>
-                    <td className="num px-5 py-3 text-[16px]">{formatUsd(strategyUsd(s, market.data!.prices), 0)}</td>
-                    <td className="px-5 py-3">{statusOf(s, market.data!)}</td>
-                  </tr>
-                ))}
-              {market.data && all.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="font-serif px-5 py-6 text-[16px] text-muted">
-                    No live strategies yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          {market.isLoading && <Skeleton className="m-5 h-24" />}
-        </Panel>
-      </section>
     </div>
   )
 }
