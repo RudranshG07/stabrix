@@ -1,3 +1,4 @@
+import 'katex/dist/katex.min.css'
 import { Saltwake } from '@/components/landing/saltwake'
 import { Story } from '@/components/landing/story'
 import './saltwake.css'
