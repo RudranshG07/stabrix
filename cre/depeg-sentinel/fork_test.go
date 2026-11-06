@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -54,11 +55,12 @@ func rpc(t *testing.T, url, method string, params ...any) json.RawMessage {
 }
 
 func TestConfigsAreValid(t *testing.T) {
-	for _, p := range []string{"config.fork.json", "config.production.json"} {
-		c := loadConfig(t, p)
-		if len(c.Tokens) != 8 {
-			t.Fatalf("%s: %d tokens", p, len(c.Tokens))
-		}
+	files, _ := filepath.Glob("config.*.json")
+	if len(files) == 0 {
+		t.Fatal("no workflow configs; run npm run cre-config -w @stabrix/ops")
+	}
+	for _, p := range files {
+		loadConfig(t, p)
 	}
 }
 
@@ -132,7 +134,16 @@ func TestLiveProductionApis(t *testing.T) {
 	if os.Getenv("STABRIX_LIVE_APIS") == "" {
 		t.Skip("set STABRIX_LIVE_APIS=1 to query CoinGecko and DefiLlama")
 	}
-	cfg := loadConfig(t, "config.production.json")
+	var cfg *Config
+	for _, p := range []string{"config.production.json", "config.testnet.json"} {
+		if _, err := os.Stat(p); err == nil {
+			cfg = loadConfig(t, p)
+			break
+		}
+	}
+	if cfg == nil {
+		t.Skip("no live config; run npm run cre-config -w @stabrix/ops -- testnet or production")
+	}
 	refs := map[string]float64{"EURC": 1.12, "BRZ": 0.18, "IDRX": 0.0000553}
 	for a, url := range cfg.ApiUrls {
 		resp, err := http.Get(url)

@@ -6,6 +6,14 @@ fork-settings:
     config-path: "./config.fork.json"
     secrets-path: ""
 
+testnet-settings:
+  user-workflow:
+    workflow-name: "stabrix-depeg-testnet"
+  workflow-artifacts:
+    workflow-path: "."
+    config-path: "./config.testnet.json"
+    secrets-path: ""
+
 production-settings:
   user-workflow:
     workflow-name: "stabrix-depeg"
