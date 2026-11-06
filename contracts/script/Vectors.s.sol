@@ -40,7 +40,7 @@ contract MathHarness {
 
 contract Vectors is Script {
     function run() external {
-        StabrixRouter router = new StabrixRouter(address(1), address(0), address(0xBEEF));
+        StabrixRouter router = new StabrixRouter(address(1), address(0), address(0xBEEF), address(2));
         StabrixLens lens = new StabrixLens(address(1));
         MathHarness h = new MathHarness();
 
@@ -55,8 +55,9 @@ contract Vectors is Script {
         c.floor = 900e18;
         c.sumCapRatio = 2.79e18;
         c.feeBps = 4;
+        c.fxFeeBps = 12;
         c.maxShareBps = 3000;
-        c.sentinel = address(0x9999999999999999999999999999999999999999);
+        c.oracle = address(0x9999999999999999999999999999999999999999);
 
         address maker = address(0xA11CE);
         address ext = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
