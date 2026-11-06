@@ -255,11 +255,11 @@ const CRE_FACTS = [
 ]
 
 const NUMBERS = [
-  ['0.13%', 'cost of a 10,000 USDC to DAI swap, fees included'],
-  ['0.23%', 'cost of a 5,000 USDC to EURC swap, FX fee included'],
-  ['0', 'USDe bought by any range after the CRE halt'],
+  ['1.12 bps', 'cost of a live $10,000 USDC to DAI swap on Base Sepolia, fee included'],
+  ['5.24 bps', 'cost of a live $10,000 USDC to EURC swap on Base Sepolia, FX fee included'],
+  ['0', 'USDe bought by any range during a halt'],
   ['+1.86%', 'backstop return from buying USDe at $0.93'],
-  ['144', 'SDK tests, quotes equal to Solidity to the wei'],
+  ['145', 'SDK tests, quotes equal to Solidity to the wei'],
   ['80', 'contract tests, 9 on official 1inch contracts on Base'],
 ]
 
@@ -515,7 +515,7 @@ export function Story() {
           eb="Measured, not promised"
           title={
             <>
-              Real coins,{' '}
+              Live trades,{' '}
               <br />
               real numbers
             </>
@@ -529,7 +529,7 @@ export function Story() {
             </div>
           ))}
         </div>
-        <p className="note-line">Measured on a Base mainnet fork with real coins and both 1inch routers.</p>
+        <p className="note-line">Swap costs are live trades on Base Sepolia over test liquidity; costs move as trades tilt the pool. The depeg numbers come from a Base mainnet fork with real coins and both 1inch routers.</p>
       </section>
 
       <Deployed />

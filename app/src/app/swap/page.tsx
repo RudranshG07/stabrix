@@ -9,7 +9,7 @@ import { Button, CoinDot, KindTag, Label, Panel, Pill, SectionHead, Skeleton, St
 import { CURRENCY } from '@/lib/coins'
 import { formatAmount, formatPct, formatRate, formatUsd, shortAddress, toUnits } from '@/lib/format'
 import { formatRatio, priceOf, units, usd, withoutMaker } from '@/lib/market'
-import { useBalances, useMarket, useStabrix } from '@/lib/stabrix'
+import { useBalances, useMarket, useOracleStatus, useStabrix } from '@/lib/stabrix'
 import { useTx } from '@/lib/tx'
 
 const SLIPPAGES = [10, 30, 100]
@@ -30,6 +30,7 @@ function Field({ children }: { children: React.ReactNode }) {
 export default function SwapPage() {
   const { deployment, client, signer, wallet } = useStabrix()
   const market = useMarket()
+  const oracle = useOracleStatus()
   const balances = useBalances(signer?.address)
   const tokens = deployment.tokens
   const bySymbol = (s: string) => tokens.find((t) => t.symbol === s) ?? tokens[0]!
@@ -47,8 +48,21 @@ export default function SwapPage() {
   const pOut = priceOf(market.data, tOut)
   const inHalted = pIn?.halted ?? false
   const outHalted = pOut?.halted ?? false
-
   const me = signer?.address
+  const inStatus = oracle.data?.find((o) => o.token.toLowerCase() === tIn.address.toLowerCase())
+  const haltedBy = inStatus?.creHalted ? 'Chainlink CRE' : inStatus?.guardianHalted ? 'the guardian' : 'the oracle'
+  const payouts = market.data
+    ? tokens.filter(
+        (t) =>
+          !priceOf(market.data, t)?.halted &&
+          market.data!.backstops.some((b) => {
+            const k = b.config.tokens.findIndex((x) => x.toLowerCase() === t.address.toLowerCase())
+            return k >= 0 && (b.balances[k] ?? 0n) > 0n && b.maker.toLowerCase() !== me?.toLowerCase()
+          }),
+      )
+    : []
+  const payoutNames = payouts.map((t) => t.symbol).join(' or ')
+
   const quote: Quote | null = useMemo(() => {
     if (!market.data || !amount || amount === 0n || tokenIn === tokenOut) return null
     return client.quoteExactIn(withoutMaker(market.data, me), tIn.address, tOut.address, amount)
@@ -88,7 +102,8 @@ export default function SwapPage() {
   else if (!amount || amount === 0n) [cta, blocked] = ['Enter an amount', true]
   else if (outHalted) [cta, blocked] = [`${tOut.symbol} is halted`, true]
   else if (balanceIn !== undefined && amount > balanceIn) [cta, blocked] = [`Not enough ${tIn.symbol}`, true]
-  else if (inHalted && (!quote || quote.legs.length === 0)) [cta, blocked] = [`No backstop is buying ${tIn.symbol}`, true]
+  else if (inHalted && (!quote || quote.legs.length === 0))
+    [cta, blocked] = [payouts.length && !payouts.some((t) => t.address === tokenOut) ? `Backstops pay in ${payoutNames}` : `No backstop is buying ${tIn.symbol}`, true]
   else if (quote && quote.legs.length > 0 && quote.filled < quote.amountIn) [cta, blocked] = ['Not enough liquidity', true]
   else if (!quote || quote.legs.length === 0) [cta, blocked] = [stale.length ? 'Chainlink rate is stale' : onlyMine ? 'No other wallet holds this pair' : 'No route', true]
   else if (inHalted) cta = `Sell ${tIn.symbol} to the backstops`
@@ -123,7 +138,7 @@ export default function SwapPage() {
         <Panel className="p-5 sm:p-7 lg:col-span-7 lg:self-start">
           {inHalted && (
             <div className="mb-5 rounded-xl border border-down bg-down/10 px-5 py-4" role="status">
-              <p className="text-[11px] font-medium tracking-[0.08em] text-down uppercase">{tIn.symbol} is halted by Chainlink CRE</p>
+              <p className="text-[11px] font-medium tracking-[0.08em] text-down uppercase">{tIn.symbol} is halted by {haltedBy}</p>
               <p className="mt-1.5 text-[14px] leading-snug">
                 Ranges refuse it. Backstops buy it at its market price{pIn?.depegE18 ? ` (${formatRate(pIn.depegE18)})` : ''} minus a
                 discount, and pay you in a healthy coin.
@@ -232,7 +247,9 @@ export default function SwapPage() {
                 {outHalted
                   ? `Nobody pays out ${tOut.symbol} while it is halted. Pick a healthy coin to receive.`
                   : inHalted
-                    ? `No backstop has room for ${tIn.symbol} right now.`
+                    ? payouts.length && !payouts.some((t) => t.address === tokenOut)
+                      ? `Backstops pay in ${payoutNames}. Pick one of those to receive.`
+                      : `No backstop has room for ${tIn.symbol} right now.`
                     : amount && amount > 0n && tokenIn !== tokenOut && noRoute
                       ? noRoute
                       : 'Enter an amount to see how the trade splits.'}
