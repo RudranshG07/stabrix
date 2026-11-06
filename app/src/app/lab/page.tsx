@@ -96,9 +96,8 @@ export default function LabPage() {
       let stalled = 0
       for (let k = 0; stalled < targets.length && k < 60; k++) {
         const out = targets[k % targets.length]!
-        const live = await client.listRanges()
-        const halted = new Set((await client.oracleStatus()).filter((s) => s.halted).map((s) => s.token.toLowerCase()))
-        const quote = client.quoteExactIn(live, coin.address, out.address, 2_000n * 10n ** BigInt(coin.decimals), halted)
+        const live = await client.market()
+        const quote = client.quoteExactIn(live, coin.address, out.address, 2_000n * 10n ** BigInt(coin.decimals))
         if (quote.legs.length === 0 || quote.filled === 0n) {
           stalled++
           continue

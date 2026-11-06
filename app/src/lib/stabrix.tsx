@@ -179,6 +179,11 @@ export function useRanges() {
   return useQuery({ queryKey: ['ranges'], queryFn: () => client.listRanges(), refetchInterval: POLL_MS })
 }
 
+export function useMarket() {
+  const { client } = useStabrix()
+  return useQuery({ queryKey: ['market'], queryFn: () => client.market(), refetchInterval: POLL_MS })
+}
+
 export function useSentinel() {
   const { client } = useStabrix()
   return useQuery({ queryKey: ['sentinel'], queryFn: () => client.oracleStatus(), refetchInterval: POLL_MS })

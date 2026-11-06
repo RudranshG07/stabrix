@@ -7,14 +7,14 @@ import { OrbitMap } from '@/components/orbit-map'
 import { TxStatus } from '@/components/tx-status'
 import { Button, Label, Panel, Pill, SectionHead, Skeleton, TokenSelect, VenueTag } from '@/components/ui'
 import { formatAmount, formatPct, shortAddress, toUnits } from '@/lib/format'
-import { useBalances, useRanges, useSentinel, useStabrix } from '@/lib/stabrix'
+import { useBalances, useMarket, useSentinel, useStabrix } from '@/lib/stabrix'
 import { useTx } from '@/lib/tx'
 
 const SLIPPAGES = [10, 30, 100]
 
 export default function SwapPage() {
   const { deployment, client, signer, wallet } = useStabrix()
-  const ranges = useRanges()
+  const market = useMarket()
   const sentinel = useSentinel()
   const balances = useBalances(signer?.address)
   const tokens = deployment.tokens
@@ -35,11 +35,11 @@ export default function SwapPage() {
   const inHalted = halted.has(tIn.address.toLowerCase())
 
   const quote: Quote | null = useMemo(() => {
-    if (!ranges.data || !amount || amount === 0n || tokenIn === tokenOut) return null
-    return client.quoteExactIn(ranges.data, tIn.address, tOut.address, amount, halted)
-  }, [ranges.data, amount, tokenIn, tokenOut, client, tIn.address, tOut.address, halted])
+    if (!market.data || !amount || amount === 0n || tokenIn === tokenOut) return null
+    return client.quoteExactIn(market.data, tIn.address, tOut.address, amount)
+  }, [market.data, amount, tokenIn, tokenOut, client, tIn.address, tOut.address])
 
-  const mid = ranges.data ? client.midPrice(ranges.data, tIn.address, tOut.address) : null
+  const mid = market.data ? client.midPrice(market.data, tIn.address, tOut.address) : null
   const impact =
     quote && mid && quote.filled > 0n ? (1 - Number((quote.amountOut * 10n ** 18n) / quote.filled) / Number(mid)) * 100 : null
   const minOut = quote ? (quote.amountOut * BigInt(10_000 - slippage)) / 10_000n : 0n
@@ -129,7 +129,7 @@ export default function SwapPage() {
             <p className="caption">YOU RECEIVE</p>
             <div className="mt-3 flex items-center gap-3">
               <output aria-live="polite" className="num min-w-0 flex-1 truncate text-3xl font-semibold tracking-tight sm:text-4xl">
-                {ranges.isLoading ? <Skeleton className="h-10 w-40" /> : quote ? formatAmount(quote.amountOut, tOut.decimals, 4) : '0'}
+                {market.isLoading ? <Skeleton className="h-10 w-40" /> : quote ? formatAmount(quote.amountOut, tOut.decimals, 4) : '0'}
               </output>
               <TokenSelect id="token-out" label="Coin to receive" tokens={tokens} value={tokenOut} onChange={setTokenOut} />
             </div>
@@ -172,12 +172,12 @@ export default function SwapPage() {
         <div className="space-y-6 lg:col-span-5">
           <Panel className="p-5 sm:p-6">
             <Label>Route</Label>
-            {ranges.isLoading ? (
+            {market.isLoading ? (
               <div className="mt-4 space-y-3">
                 <Skeleton className="h-16" />
                 <Skeleton className="h-16" />
               </div>
-            ) : !ranges.data || ranges.data.length === 0 ? (
+            ) : !market.data || market.data.ranges.length === 0 ? (
               <p className="mt-4 text-sm text-muted">No live ranges yet. Add liquidity to open the pool.</p>
             ) : !quote || quote.legs.length === 0 ? (
               <p className="mt-4 text-sm text-muted">
@@ -186,7 +186,7 @@ export default function SwapPage() {
             ) : (
               <ul className="mt-4 space-y-2.5">
                 {quote.legs.map((leg) => {
-                  const r = quote.ranges.find((x) => `${x.app}:${x.hash}` === leg.id)
+                  const r = quote.strategies.find((x) => x.id === leg.id)
                   const share = Number((leg.amountIn * 10_000n) / quote.amountIn) / 100
                   return (
                     <li key={leg.id} className="rounded-2xl bg-paper p-3.5">
@@ -212,7 +212,7 @@ export default function SwapPage() {
           <Panel className="p-5 sm:p-6">
             <Label>Orbit map</Label>
             <div className="mt-4">
-              {ranges.isLoading ? <Skeleton className="aspect-square" /> : <OrbitMap ranges={ranges.data ?? []} coins={tokens} />}
+              {market.isLoading ? <Skeleton className="aspect-square" /> : <OrbitMap ranges={market.data?.ranges ?? []} coins={tokens} />}
             </div>
           </Panel>
         </div>
