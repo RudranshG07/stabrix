@@ -57,13 +57,15 @@ const ICONS = {
   ),
 }
 
-function SecHead({ eb, title, intro, id, logo }: { eb: string; title: ReactNode; intro?: ReactNode; id?: string; logo?: string }) {
+function SecHead({ eb, title, intro, id, logo }: { eb?: string; title: ReactNode; intro?: ReactNode; id?: string; logo?: string }) {
   return (
     <header className="sec-head" id={id}>
-      <p className="eb">
-        {logo && <Image src={logo} alt="" width={44} height={44} />}
-        {eb}
-      </p>
+      {eb && (
+        <p className="eb">
+          {logo && <Image src={logo} alt="" width={44} height={44} />}
+          {eb}
+        </p>
+      )}
       <h2>{title}</h2>
       {intro && <p className="intro">{intro}</p>}
     </header>
@@ -172,18 +174,6 @@ const REFERENCES: [string, string, string][] = [
   ['Egorov', 'StableSwap, 2019', 'https://resources.curve.finance/pdf/stableswap-paper.pdf'],
 ]
 
-const CHAPTERS: [string, string][] = [
-  ['problem', 'The problem'],
-  ['how', 'How it works'],
-  ['math', 'The math'],
-  ['see', 'See it'],
-  ['aqua', 'Built for 1inch Aqua'],
-  ['cre', 'Built for Chainlink CRE'],
-  ['versus', 'Versus'],
-  ['measured', 'Measured'],
-  ['references', 'References'],
-]
-
 const STEPS = [
   {
     icon: ICONS.ship,
@@ -276,19 +266,10 @@ const NUMBERS = [
 export function Story() {
   return (
     <div className="story">
-      <div className="idx" role="navigation" aria-label="Chapters">
-        {CHAPTERS.map(([id, label], k) => (
-          <a key={id} href={`#${id}`}>
-            <span>{String(k + 1).padStart(2, '0')}</span>
-            {label}
-          </a>
-        ))}
-      </div>
-
       <section className="sec">
         <SecHead
           id="problem"
-          eb="01 · The problem"
+          eb="The problem"
           title={
             <>
               Stablecoins{' '}
@@ -308,14 +289,11 @@ export function Story() {
                 <Tex>{c.tex}</Tex>
               </div>
               <p>{c.lead}</p>
-              <ol className="abc">
-                {c.facts.map((f, k) => (
-                  <li key={f}>
-                    <span>{String.fromCharCode(65 + k)}</span>
-                    {f}
-                  </li>
+              <ul className="abc">
+                {c.facts.map((f) => (
+                  <li key={f}>{f}</li>
                 ))}
-              </ol>
+              </ul>
             </article>
           ))}
         </div>
@@ -324,7 +302,7 @@ export function Story() {
       <section className="sec">
         <SecHead
           id="how"
-          eb="02 · How it works"
+          eb="How it works"
           title={
             <>
               Four moves,{' '}
@@ -335,9 +313,8 @@ export function Story() {
           intro="Stabrix is an FX market made of wallets. You keep your coins, they earn spread, and when one coin breaks the same balance catches it."
         />
         <ol className="steps">
-          {STEPS.map((st, k) => (
+          {STEPS.map((st) => (
             <li key={st.title} className="ink-card step">
-              <span className="num">{String(k + 1).padStart(2, '0')}</span>
               <span className="icon">{st.icon}</span>
               <span className="tag">{st.tag}</span>
               <h3>{st.title}</h3>
@@ -350,7 +327,7 @@ export function Story() {
       <section className="sec">
         <SecHead
           id="math"
-          eb="03 · The math"
+          eb="The math"
           title={
             <>
               One curve,{' '}
@@ -361,9 +338,8 @@ export function Story() {
           intro="The pricing follows Paradigm's research on AMMs for many stablecoins, extended to live FX rates and written as two SwapVM instructions. These are the equations the contracts run."
         />
         <div className="math-grid">
-          {MATH.map((m, k) => (
+          {MATH.map((m) => (
             <article key={m.title} className="ink-card flat eq">
-              <p className="tag">{String(k + 1).padStart(2, '0')}</p>
               <h3>{m.title}</h3>
               <div className="formula big">
                 <Tex display>{m.tex}</Tex>
@@ -377,7 +353,7 @@ export function Story() {
       <section className="sec">
         <SecHead
           id="see"
-          eb="04 · See it"
+          eb="See it"
           title={
             <>
               Run the curve{' '}
@@ -397,7 +373,7 @@ export function Story() {
         <SecHead
           id="aqua"
           logo="/brand/1inch.png"
-          eb="05 · Built for 1inch Aqua"
+          eb="Built for 1inch Aqua"
           title={
             <>
               Aqua, used the way{' '}
@@ -464,7 +440,7 @@ export function Story() {
         <SecHead
           id="cre"
           logo="/brand/chainlink.png"
-          eb="06 · Built for Chainlink CRE"
+          eb="Built for Chainlink CRE"
           title={
             <>
               CRE runs the pool,{' '}
@@ -497,7 +473,7 @@ export function Story() {
       <section className="sec">
         <SecHead
           id="versus"
-          eb="07 · Versus"
+          eb="Versus"
           title={
             <>
               Where Stabrix{' '}
@@ -536,7 +512,7 @@ export function Story() {
       <section className="sec">
         <SecHead
           id="measured"
-          eb="08 · Measured, not promised"
+          eb="Measured, not promised"
           title={
             <>
               Real coins,{' '}
@@ -559,11 +535,10 @@ export function Story() {
       <Deployed />
 
       <section className="sec">
-        <SecHead id="references" eb="09 · References" title="References" />
+        <SecHead id="references" title="References" />
         <ol className="refs">
-          {REFERENCES.map(([who, what, href], k) => (
+          {REFERENCES.map(([who, what, href]) => (
             <li key={href}>
-              <span>[{String(k + 1).padStart(2, '0')}]</span>
               <b>{who}</b>
               <a href={href} target="_blank" rel="noreferrer">
                 {what} ↗

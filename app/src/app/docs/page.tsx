@@ -37,8 +37,7 @@ function Section({ id, children }: { id: string; children: ReactNode }) {
   const k = CHAPTERS.findIndex(([c]) => c === id)
   return (
     <section id={id} className="scroll-mt-28 border-t border-line pt-10">
-      <p className="num text-[13.5px] tracking-[0.08em] text-muted uppercase">{String(k + 1).padStart(2, '0')}</p>
-      <h2 className="title mt-2 text-[20px] leading-none sm:text-[24px]">{CHAPTERS[k]![1]}</h2>
+      <h2 className="title text-[20px] leading-none sm:text-[24px]">{CHAPTERS[k]![1]}</h2>
       <div className="mt-6 space-y-4">{children}</div>
     </section>
   )
@@ -183,16 +182,15 @@ export default function DocsPage() {
       <aside className="lg:sticky lg:top-28 lg:max-h-[calc(100dvh-8rem)] lg:self-start lg:overflow-y-auto">
         <p className="num text-[14px] tracking-[0.08em] uppercase">Stabrix · Docs</p>
         <nav aria-label="Docs chapters" className="ink-card mt-4 p-3 lg:mt-6">
-          <ol className="grid grid-cols-2 gap-x-3 lg:grid-cols-1">
-            {CHAPTERS.map(([id, label], k) => (
+          <ul className="grid grid-cols-2 gap-x-3 lg:grid-cols-1">
+            {CHAPTERS.map(([id, label]) => (
               <li key={id}>
-                <a href={`#${id}`} className="flex items-baseline gap-2.5 rounded-xl px-2.5 py-1.5 text-[13px] transition-colors hover:bg-surface-hover">
-                  <span className="text-[10px] font-medium tracking-[0.08em] text-muted">{String(k + 1).padStart(2, '0')}</span>
+                <a href={`#${id}`} className="block rounded-xl px-2.5 py-1.5 text-[13px] transition-colors hover:bg-surface-hover">
                   {label}
                 </a>
               </li>
             ))}
-          </ol>
+          </ul>
         </nav>
       </aside>
 

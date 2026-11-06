@@ -142,7 +142,6 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
 .swp .ink-card p{margin-top:14px;font:400 18.5px/1.55 "EB Garamond",serif}
 .swp .steps{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
 .swp .step{padding-top:26px}
-.swp .step .num{position:absolute;right:24px;top:20px;font:500 40px/1 "EB Garamond",serif;letter-spacing:-.04em;opacity:.35}
 .swp .step .tag{display:inline-block;margin-bottom:14px;font:700 10.5px/1 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase;border:2px solid var(--line);border-radius:999px;padding:7px 10px 6px}
 .swp .flow{list-style:none;display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin-bottom:36px}
 .swp .flow li{position:relative;padding:20px 26px 20px 18px;border:3px solid var(--line);border-right:0;background:var(--card);min-height:108px}
@@ -167,10 +166,6 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
 .swp .pill.ghost{background:transparent}
 .swp .foot{display:flex;justify-content:space-between;gap:20px;padding:26px 0 40px;border-top:3px solid var(--line);font:700 11px/1.5 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase}
 
-.swp .idx{display:grid;grid-template-columns:repeat(3,1fr);gap:0 26px;padding:70px 0 10px}
-.swp .idx a{display:flex;gap:16px;align-items:baseline;padding:15px 2px 13px;border-bottom:2px dashed var(--line);font:400 21px/1.2 "EB Garamond",serif;transition:padding .2s}
-.swp .idx a:hover{padding-left:10px}
-.swp .idx a span{font:700 11px/1 "Open Sans",sans-serif;letter-spacing:.14em;opacity:.55}
 .swp .ink-card .tag,.swp .ch-card .tag{display:inline-block;font:700 10.5px/1 "Open Sans",sans-serif;letter-spacing:.14em;text-transform:uppercase;border:2px solid var(--line);border-radius:999px;padding:7px 10px 6px}
 .swp .prob h3{margin-top:18px;font-size:44px}
 .swp .prob .viz{margin:20px 0 4px;border:2px solid var(--line);border-radius:18px;background:var(--paper);padding:14px}
@@ -181,7 +176,6 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
 .swp .formula .katex-display{margin:0}
 .swp .abc{list-style:none;margin-top:16px;border-top:2px dashed var(--line)}
 .swp .abc li{display:flex;gap:14px;padding:11px 0 10px;border-bottom:2px dashed var(--line);font:400 17.5px/1.4 "EB Garamond",serif}
-.swp .abc li span{font:700 11px/1.6 "Open Sans",sans-serif;letter-spacing:.1em;opacity:.55}
 .swp .math-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px}
 .swp .grid3>*,.swp .math-grid>*,.swp .charts>*,.swp .ch-split>*{min-width:0}
 .swp .eq h3{margin-top:16px}
@@ -231,8 +225,7 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
 .swp .versus tbody th{font-weight:500}
 .swp .versus .us,.swp .versus thead th:last-child{background:var(--ink);color:var(--on-ink)}
 .swp .refs{list-style:none;border-top:2px dashed var(--line)}
-.swp .refs li{display:grid;grid-template-columns:70px 130px 1fr;gap:14px;align-items:baseline;padding:15px 0 13px;border-bottom:2px dashed var(--line);font:400 19px/1.35 "EB Garamond",serif}
-.swp .refs li span{font:700 11px/1 "Open Sans",sans-serif;letter-spacing:.1em;opacity:.55}
+.swp .refs li{display:grid;grid-template-columns:130px 1fr;gap:14px;align-items:baseline;padding:15px 0 13px;border-bottom:2px dashed var(--line);font:400 19px/1.35 "EB Garamond",serif}
 .swp .refs a{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
 .swp .addr{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .swp .addr a{display:grid;grid-template-columns:1fr auto;gap:4px 16px;padding:16px 20px;border:3px solid var(--line);border-radius:18px;background:var(--card);transition:transform .2s}
@@ -243,7 +236,6 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
 
 @media (max-width:1100px){
   .swp .ch-split{grid-template-columns:1fr}
-  .swp .idx{grid-template-columns:repeat(2,1fr)}
   .swp .steps{grid-template-columns:repeat(2,1fr)}
   .swp .flow{grid-template-columns:repeat(3,1fr);row-gap:14px}
   .swp .flow li{border-right:3px solid var(--line);border-radius:20px !important;margin-right:14px}
@@ -254,7 +246,6 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
   .swp .ch-side .ch-tick{font-size:14px}
   .swp .ch-tick{font-size:26px}
   .swp .ch-axis{font-size:18px}
-  .swp .idx{grid-template-columns:1fr;padding-top:40px}
   .swp .math-grid,.swp .arch-row,.swp .addr{grid-template-columns:1fr}
   .swp .prob h3{font-size:36px}
   .swp .ch-card{padding:22px 18px 20px;border-radius:22px}
@@ -263,8 +254,7 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
   .swp .ch-read dd{font-size:22px}
   .swp .formula.big{font-size:17px}
   .swp .arch{padding:16px;border-radius:22px}
-  .swp .refs li{grid-template-columns:44px 1fr;font-size:17px}
-  .swp .refs li a{grid-column:2}
+  .swp .refs li{grid-template-columns:1fr;gap:4px;font-size:17px}
   .swp .versus-wrap{border-radius:22px}
   .swp .story{padding:10px 18px 0}
   .swp .sec{padding:80px 0 20px}
