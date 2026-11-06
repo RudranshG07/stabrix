@@ -7,12 +7,20 @@ const targets = [
   ['stabrixRouterAbi', 'StabrixRouter.sol/StabrixRouter.json'],
   ['stabrixBatchTakerAbi', 'StabrixBatchTaker.sol/StabrixBatchTaker.json'],
   ['stabrixExtructionAbi', 'StabrixExtruction.sol/StabrixExtruction.json'],
+  ['stabrixBackstopAbi', 'StabrixBackstop.sol/StabrixBackstop.json'],
   ['stabrixLensAbi', 'StabrixLens.sol/StabrixLens.json'],
   ['stabrixOracleAbi', 'StabrixOracle.sol/StabrixOracle.json'],
   ['aquaAbi', 'Aqua.sol/Aqua.json'],
   ['mockStablecoinAbi', 'MockStablecoin.sol/MockStablecoin.json'],
 ]
-const errorSources = ['StabrixMath.sol/StabrixMath.json', 'StabrixPricing.sol/StabrixPricing.json', 'StabrixConfig.sol/StabrixConfig.json']
+const errorSources = [
+  'StabrixMath.sol/StabrixMath.json',
+  'StabrixPricing.sol/StabrixPricing.json',
+  'StabrixConfig.sol/StabrixConfig.json',
+  'StabrixBackstopPricing.sol/StabrixBackstopPricing.json',
+  'StabrixBackstopConfig.sol/StabrixBackstopConfig.json',
+  'StabrixOracle.sol/StabrixOracle.json',
+]
 
 const read = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'))
 const libErrors = errorSources.flatMap((p) => read(p).abi.filter((x) => x.type === 'error'))
