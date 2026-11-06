@@ -1,11 +1,10 @@
 import type { Metadata } from 'next'
-import { EB_Garamond, Goudy_Bookletter_1911, JetBrains_Mono, Josefin_Sans, Open_Sans, Space_Grotesk } from 'next/font/google'
+import { EB_Garamond, Goudy_Bookletter_1911, JetBrains_Mono, Josefin_Sans, Open_Sans } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { StabrixProvider } from '@/lib/stabrix'
 import './globals.css'
 
-const grotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-grotesk', display: 'swap' })
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains', display: 'swap' })
 const goudy = Goudy_Bookletter_1911({ subsets: ['latin'], weight: '400', variable: '--font-goudy', display: 'swap' })
 const garamond = EB_Garamond({ subsets: ['latin'], weight: ['400', '500'], style: ['normal', 'italic'], variable: '--font-garamond', display: 'swap' })
@@ -19,7 +18,7 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const fonts = [grotesk, mono, goudy, garamond, open, josefin].map((f) => f.variable).join(' ')
+  const fonts = [mono, goudy, garamond, open, josefin].map((f) => f.variable).join(' ')
   return (
     <html lang="en" className={fonts}>
       <body className="min-h-dvh">

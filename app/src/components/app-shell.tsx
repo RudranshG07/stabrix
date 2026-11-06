@@ -61,7 +61,7 @@ function Nav({ path, className }: { path: string; className: string }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname()
   const ctx = useMaybeStabrix()
-  if (path === '/' || path === '/classic') return <>{children}</>
+  if (path === '/') return <>{children}</>
   return (
     <>
       <header className="sticky top-0 z-20 border-b-[3px] border-surface-line bg-paper/95 backdrop-blur">
