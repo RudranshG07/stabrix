@@ -32,14 +32,16 @@ The result is a market nobody else can offer: **a buyer of last resort for every
 
 Stabrix is not a pool with a 1inch integration bolted on. It is an Aqua app: without Aqua's shared liquidity the backstop would be capital sitting idle, waiting for a crisis, and nobody would fund it. On Aqua it costs nothing to keep, because the same coins earn FX fees every day until they are needed.
 
-| 1inch primitive | What Stabrix does with it |
-|---|---|
-| **Aqua shared liquidity** | Every strategy is an allowance over the maker's wallet, so one balance backs FX ranges on two routers and a backstop at once. Coins stay in the wallet and stay spendable |
-| **Ship and dock** | Opening a range or pledging a backstop is one `Aqua.ship`. Closing it is `dock`. No deposit, no withdrawal, no LP token |
-| **Pull and push settlement** | A fill pulls the input to the maker and pushes the output to the taker in one call. The curve reads the maker's live Aqua balances, so it always prices what the maker actually holds |
-| **SwapVM instructions** | Two new instructions: `StabrixTick` (opcode 34), a sphere AMM over up to 8 coins, and `StabrixBackstop` (opcode 35), an oracle-gated depeg buyer. Each config is packed under SwapVM's 255-byte argument limit: 219 bytes for 8 coins |
-| **AquaSwapVMRouter, official** | Both instructions also run on 1inch's deployed router through its Extruction opcode (32), without changing a line of any 1inch contract. Any taker of 1inch's router can fill a Stabrix strategy |
-| **SwapVM programs** | A strategy is a SwapVM program; ours is one instruction with a packed config, so a maker can run many different ranges from one wallet |
+| 1inch primitive | What Stabrix does with it | Code |
+|---|---|---|
+| **Aqua shared liquidity** | Every strategy is an allowance over the maker's wallet, so one balance backs FX ranges on two routers and a backstop at once. Coins stay in the wallet and stay spendable | [test: one balance, two strategies](contracts/test/StabrixBackstop.t.sol#L181) |
+| **Ship and dock** | Opening a range or pledging a backstop is one `Aqua.ship`. Closing it is `dock`. No deposit, no withdrawal, no LP token | [`sdk/src/client.ts`](sdk/src/client.ts#L516-L550) |
+| **Pull and push settlement** | A fill pulls the input to the maker and pushes the output to the taker in one call. The curve reads the maker's live Aqua balances, so it always prices what the maker actually holds | [`StabrixPricing.sol`](contracts/src/StabrixPricing.sol#L18-L77) |
+| **SwapVM instructions** | Two new instructions: `StabrixTick` (opcode 34), a sphere AMM over up to 8 coins, and `StabrixBackstop` (opcode 35), an oracle-gated depeg buyer | [`StabrixRouter.sol`](contracts/src/StabrixRouter.sol#L40-L61), [`StabrixMath.sol`](contracts/src/StabrixMath.sol), [`StabrixBackstopPricing.sol`](contracts/src/StabrixBackstopPricing.sol#L25-L93) |
+| **255-byte arguments** | Each config is packed under SwapVM's 255-byte argument limit: 219 bytes for an 8-coin range, 209 for a backstop | [`StabrixConfig.sol`](contracts/src/StabrixConfig.sol#L40-L57), [`StabrixBackstopConfig.sol`](contracts/src/StabrixBackstopConfig.sol#L28-L44) |
+| **AquaSwapVMRouter, official** | Both instructions also run on 1inch's deployed router through its Extruction opcode (32), without changing a line of any 1inch contract. Any taker of 1inch's router can fill a Stabrix strategy | [`StabrixExtruction.sol`](contracts/src/StabrixExtruction.sol), [`StabrixBackstop.sol`](contracts/src/StabrixBackstop.sol), [test: same quote on both routers](contracts/test/StabrixRouter.t.sol#L283) |
+| **Both routers, one transaction** | `StabrixBatchTaker` fills makers on the Stabrix router and on 1inch's AquaSwapVMRouter in a single swap | [`StabrixBatchTaker.sol`](contracts/src/StabrixBatchTaker.sol#L31), [test](contracts/test/StabrixRouter.t.sol#L308) |
+| **Official contracts, real tokens** | Every pair of 8 real Base stablecoins fills on 1inch's official Aqua and AquaSwapVMRouter | [`BaseFork.t.sol`](contracts/test/fork/BaseFork.t.sol#L179) |
 
 What Stabrix adds to the 1inch ecosystem:
 
@@ -199,13 +201,15 @@ USDe back within 0.25% on every source ─► resume report ─► backstops go 
 
 The workflow, `cre/depeg-sentinel`, is the orchestration layer: it sets the FX rate every swap uses and decides when a coin is broken.
 
-| Step | Detail |
-|---|---|
-| Trigger | Cron every 30 seconds |
-| Onchain read | One Multicall3 call: every Chainlink feed and the oracle's current status per coin |
-| Offchain read | CoinGecko (full precision) and DefiLlama over HTTP, aggregated across nodes with median consensus and a check that every node saw the same set of prices |
-| Decide | `policy.go`, below |
-| Write | A signed report through the CRE forwarder to `StabrixOracle.onReport` |
+| Step | Detail | Code |
+|---|---|---|
+| Trigger | Cron every 30 seconds | [`main.go`](cre/depeg-sentinel/main.go#L23-L30) |
+| Onchain read | One Multicall3 call: every Chainlink feed and the oracle's current status per coin | [`main.go`](cre/depeg-sentinel/main.go#L55-L69) |
+| Offchain read | CoinGecko (full precision) and DefiLlama over HTTP, aggregated across nodes with median consensus and a check that every node saw the same set of prices | [`main.go`](cre/depeg-sentinel/main.go#L72-L83), [`policy.go`](cre/depeg-sentinel/policy.go#L246-L250) |
+| Decide | Halt, resume and rate push rules, below | [`policy.go`](cre/depeg-sentinel/policy.go#L120-L206) |
+| Write | A signed report through the CRE forwarder to `StabrixOracle.onReport` | [`main.go`](cre/depeg-sentinel/main.go#L138-L166) |
+| Consume | The oracle checks the forwarder and workflow owner, then stores prices and halts that every swap reads | [`StabrixOracle.sol`](contracts/src/StabrixOracle.sol#L117-L138) |
+| Config | Feeds, API URLs and thresholds for each network | [`config.testnet.json`](cre/depeg-sentinel/config.testnet.json), [`workflow.yaml`](cre/depeg-sentinel/workflow.yaml) |
 
 | Rule | Threshold |
 |---|---|
@@ -217,10 +221,10 @@ The workflow, `cre/depeg-sentinel`, is the orchestration layer: it sets the FX r
 
 The oracle is defensive about what it accepts:
 
-- Reports only from the configured forwarder **and** the configured workflow owner. Until a workflow owner is set, every report is refused.
-- A CRE FX rate is used only if it is under 15 minutes old **and** within 0.5% of the Chainlink feed. Otherwise the feed is used.
+- Reports only from the configured forwarder **and** the configured workflow owner. Until a workflow owner is set, every report is refused ([`onReport`](contracts/src/StabrixOracle.sol#L117-L138)).
+- A CRE FX rate is used only if it is under 15 minutes old **and** within 0.5% of the Chainlink feed. Otherwise the feed is used ([`_fxPrice`](contracts/src/StabrixOracle.sol#L194-L200)).
 - A Chainlink feed older than its limit pauses FX swaps for that coin rather than trading on a stale rate.
-- The depeg price is the lower of the fresh CRE price and the market feed, so a backstop never overpays.
+- The depeg price is the lower of the fresh CRE price and the market feed, so a backstop never overpays ([`depegPrice`](contracts/src/StabrixOracle.sol#L100-L111)).
 - Reports from the future are refused. Guardian halts are separate and survive a calm CRE report.
 
 ## How it compares
