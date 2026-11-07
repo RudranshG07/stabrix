@@ -4,9 +4,17 @@
 
 ![Landing](docs/screenshots/landing.png)
 
-| Swap | Liquidity | Depeg |
-|---|---|---|
-| ![Swap](docs/screenshots/swap.png) | ![Liquidity](docs/screenshots/liquidity.png) | ![Depeg](docs/screenshots/lab.png) |
+| Swap, live on Base Sepolia | Pool, live on Base Sepolia |
+|---|---|
+| ![Swap](docs/screenshots/swap.png) | ![Pool](docs/screenshots/pool.png) |
+| **Liquidity, Base mainnet fork** | **Depeg, Base mainnet fork** |
+| ![Liquidity](docs/screenshots/liquidity.png) | ![Depeg](docs/screenshots/lab.png) |
+
+The swap quotes $10,000 USDC for 8,965.78 EURC in one leg on 1inch's router, 5.13 bps under the Chainlink rate with the FX fee. The pool holds $41.4M of test coins in FX ranges and $260k pledged to backstops, all still in one wallet.
+
+| Mobile |  |
+|---|---|
+| ![Mobile landing](docs/screenshots/mobile-landing.png) | ![Mobile swap](docs/screenshots/mobile-swap.png) |
 
 ## What it does
 
@@ -56,7 +64,7 @@ The same balance backs both strategies, because Aqua only records allowances and
 | What | Where |
 |---|---|
 | Workflow | `cre/depeg-sentinel/main.go` (cron, one Multicall3 read, two HTTP fetches with consensus, report, EVM write) |
-| Policy | `cre/depeg-sentinel/policy.go`: 3% off peg halts, both sources past 0.75% halt, a halted coin resumes inside 0.25%. An offchain halt needs every configured API to agree; a Chainlink feed can halt alone. FX rates push on a 2 bp move or every 10 minutes |
+| Policy | `cre/depeg-sentinel/policy.go`: 3% off peg halts, both sources past 0.75% halt, a halted coin resumes once every source that answered is back inside 0.25%, so one lagging API cannot lift a halt. An offchain halt needs every configured API to agree; a Chainlink feed can halt alone. FX rates push on a 2 bp move or every 10 minutes |
 | Consumer | `contracts/src/StabrixOracle.sol`: accepts reports only from the forwarder and the set workflow owner, uses a CRE rate only if fresh and within 0.5% of the Chainlink feed, refuses swaps on a stale feed, keeps guardian halts separate |
 | Simulation | Run against the fork and a Base Sepolia fork with `--broadcast`; the reports change prices and halts onchain |
 
@@ -70,7 +78,7 @@ The same balance backs both strategies, because Aqua only records allowances and
 | Uses SwapVM, own instructions allowed | Done | Two new instructions, `StabrixTick` (34) and `StabrixBackstop` (35), in `contracts/src/StabrixRouter.sol` |
 | Positions shown through tests or a UI | Done | 80 Foundry tests and the Liquidity, Pool and Activity pages |
 | Official Aqua and SwapVM contracts (modified SwapVM redeploy allowed) | Done | Official Aqua `0x1111113C...a90a` and AquaSwapVMRouter `0x111111338c...C0De` on Base; our router is SwapVM v1.0.2 with two added instructions. `contracts/test/fork/BaseFork.t.sol` |
-| Onchain token transfers in the demo (local forks ok) | Done | Swaps, range and backstop fills on the Base fork through the app, quotes equal to the chain to the wei; a live swap on Base Sepolia, tx `0x550f...4bc6` |
+| Onchain token transfers in the demo (local forks ok) | Done | Live on Base mainnet with real USDC and EURC on the official Aqua and router (seed txs below); live swaps and a backstop depeg sale on Base Sepolia (`docs/evidence/sepolia-costs.txt`, `docs/evidence/sepolia-depeg.txt`); swaps, range and backstop fills on the Base fork through the app, quotes equal to the chain to the wei |
 | Proper git history | Ongoing | Small commits per change; keep committing through the final day |
 
 **Chainlink, Best workflow with CRE**
@@ -90,7 +98,8 @@ All on a Base mainnet fork with real tokens and both 1inch routers, unless noted
 |---|---|
 | $10,000 USDC to DAI, live on Base Sepolia from a fresh wallet | 9,998.88 DAI, 1.12 bps with the fee, equal to the quote: [0xe8c89fee...3003](https://sepolia.basescan.org/tx/0xe8c89fee79fec9cb8daaa142a622a409e00c1d579c22ed34b7968109bfd63003) |
 | $10,000 USDC to EURC, live on Base Sepolia | 8,965.68 EURC, 5.24 bps with the FX fee: [0x02cb7a18...895d](https://sepolia.basescan.org/tx/0x02cb7a187e5521a770386bb79b6ec95bcb15109785a4494c2e6c2e586dc5895d) |
-| Base Sepolia cost table (`npm run costs`) | USD to USD: 1.01 / 1.12 / 2.21 bps at $1k / $10k / $100k. USD to EUR: 5.01 / 5.12 / 6.21 bps. Log in `docs/evidence/sepolia-costs.txt` |
+| Base Sepolia cost table (`npm run costs`), measured Nov 7 | USD to USD: 1.03 / 1.14 / 2.23 bps at $1k / $10k / $100k. USD to EUR: 5.02 / 5.13 / 6.22 bps. One leg each, fees included. Log in `docs/evidence/sepolia-costs.txt` |
+| Base mainnet, real money | $1.70 of USDC and EURC backs $3.74 of strategies on both 1inch routers, a shared liquidity ratio of 2.20x; the full deploy cost 0.0000656 ETH (about $0.15) |
 | Depeg on Base Sepolia (`npm run depeg:testnet`) | Guardian halts test USDe at $0.93, every range refuses it, a fresh wallet sells 5,000 USDe to two backstops (one per router) for 4,549.25 USDC: [0x01521a82...b7b8](https://sepolia.basescan.org/tx/0x01521a820a999ee5489f34f18d396965eb1f602f6b58e6c10caabc39e0ddb7b8), then resumed. Log in `docs/evidence/sepolia-depeg.txt` |
 | 10,000 USDC to DAI on the fork | 9,986.96 DAI (0.13%) with thin seed liquidity, SDK quote equal to the chain to the wei |
 | 5,000 USDC to EURC | 4,468.37 EURC, 0.23% against Chainlink EUR/USD, FX fee included |
@@ -112,7 +121,7 @@ npm run price-api -w @stabrix/ops
 cd app && NEXT_PUBLIC_DEV_ACCOUNTS=1 NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8556 DEPLOYMENT_NAME=base-fork-fx npx next dev -p 3000
 ```
 
-`devnet.sh` forks Base, deploys with the CRE simulation forwarder, ships three FX ranges and two backstops, and writes the fork CRE config. Fork accounts are anvil's public keys and only appear with `NEXT_PUBLIC_DEV_ACCOUNTS=1`. The fork freezes Chainlink's feeds while new blocks use the real clock, so FX swaps stop with a stale rate about 75 minutes after it starts; restart it before a demo.
+`devnet.sh` forks Base, deploys with the CRE simulation forwarder, ships three FX ranges and two backstops, and writes the fork CRE config. Fork accounts are anvil's public keys and only appear with `NEXT_PUBLIC_DEV_ACCOUNTS=1`; hosted builds never include them. A fork freezes Chainlink's feeds while new blocks use the real clock, so `devnet.sh` deploys the fork oracle with a 30 day feed age; Sepolia and mainnet keep the real limits (75 minutes for FX feeds, 25 hours for market feeds).
 
 Chainlink CRE on the fork (from `cre/`, after `cre login`, with `CRE_ETH_PRIVATE_KEY` in `cre/.env` set to a funded anvil key):
 
@@ -120,28 +129,11 @@ Chainlink CRE on the fork (from `cre/`, after `cre login`, with `CRE_ETH_PRIVATE
 cre workflow simulate depeg-sentinel -T fork-settings --broadcast --non-interactive --trigger-index 0
 ```
 
-The app has five pages: Swap, Liquidity (open FX ranges and pledge backstops), Pool (reserve mix, liquidity by depeg tolerance, every strategy), Activity (swaps, strategies and CRE reports read from the chain) and Depeg. The Depeg page crashes a coin through the local price API, shows this command, and charts every strategy while the workflow halts the coin and backstops buy it.
+The app has five pages: Swap, Liquidity (open FX ranges and pledge backstops), Pool (reserve mix, liquidity by depeg tolerance, every strategy), Activity (swaps, strategies and CRE reports read from the chain) and Depeg. The Depeg page crashes a coin through the local price API, shows this command, and charts every strategy while the workflow halts the coin and backstops buy it. The Depeg page only exists on the fork; on Sepolia the same flow runs with `npm run depeg:testnet` (below).
 
-## Base Sepolia
+Any EIP-6963 wallet works, and the app switches it to the right Base network on its own. The swap page says whether Chainlink CRE or the guardian halted a coin, which coins a backstop pays in, and when a Chainlink rate is stale.
 
-1inch has not deployed Aqua or the SwapVM router on Base Sepolia, so the deploy script deploys their unmodified source next to Stabrix, with mock stablecoins and testnet FX feeds. Chainlink's CRE simulation forwarder is already there. This flow was rehearsed end to end on a local fork of Base Sepolia.
-
-```bash
-cd contracts
-PRIVATE_KEY=<key> CRE_FORWARDER=0x82300bd7c3958625581cc2F77bC6464dcEcDF3e5 \
-CRE_WORKFLOW_OWNER=0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa \
-  forge script script/Deploy.s.sol --tc Deploy --rpc-url https://sepolia.base.org --broadcast
-cd ../ops
-export RPC_URL=https://sepolia.base.org PRIVATE_KEY=<key>
-npm run sync-feeds
-npm run seed:testnet
-npm run cre-config -- testnet
-cd ../cre && cre workflow simulate depeg-sentinel -T testnet-settings --broadcast --non-interactive --trigger-index 0
-```
-
-This writes `deployments/84532.json`.
-
-### Live on Base mainnet
+## Live on Base mainnet
 
 Deployed against 1inch's official Aqua and AquaSwapVMRouter on Base, with real USDC and EURC.
 
@@ -160,7 +152,7 @@ Seeded with a small amount of real money by `npm run seed:mainnet`: one wallet h
 
 The oracle accepts Chainlink CRE reports only from Chainlink's production forwarder and only once a workflow owner is set, which needs CRE deploy access. Until then FX rates come straight from the Chainlink feeds onchain and only the guardian can halt a coin.
 
-### Live on Base Sepolia
+## Live on Base Sepolia
 
 | Contract | Address |
 |---|---|
@@ -175,17 +167,47 @@ The oracle accepts Chainlink CRE reports only from Chainlink's production forwar
 
 Seeded with test coins (free to mint) by `npm run seed:testnet`: four FX ranges, the deepest a Tight range of $5,000,000 per coin on the 1inch router, plus Tight, Balanced and Wide ranges, and two Standard backstops (caps of $20,000 and $100,000 per halted coin) pledging $130,000 of USDC and $130,000 of USDT in total from the same wallet. A first test swap of 1,000 USDC for 999.75 DAI: [0x550fba65...4bc6](https://sepolia.basescan.org/tx/0x550fba656dce936c1752d838825e23b9a85335b272238882ee6572e458844bc6). A real CRE CLI simulation wrote live CoinGecko and DefiLlama prices to the oracle: [0x9b38b774...7e77](https://sepolia.basescan.org/tx/0x9b38b774b71255ec54cd13c0ba9a76d2d16f0699919890a8557e45ebf7697e77), log in `docs/evidence/cre-simulate-sepolia.txt`.
 
-`https://sepolia.base.org` limits `eth_getLogs` to 200 blocks, which is too small for strategy discovery. Use `https://base-sepolia-rpc.publicnode.com` as `RPC_URL` for ops and `NEXT_PUBLIC_RPC_URL` for the app.
- `0xaAaA...aAaA` is the owner the CRE simulator reports as; a production deploy sets the real workflow owner instead. `sync-feeds` copies today's Base mainnet Chainlink EUR, BRL and IDR rates into the testnet feeds. With `--broadcast` the simulation sends a real transaction from `CRE_ETH_PRIVATE_KEY` in `cre/.env`, so on Base Sepolia that must be your own key with test ETH, never a public anvil key.
+Run the demos against it (each trade uses a fresh wallet funded by the deployer, so the quote skips no strategy):
+
+```bash
+cd ops
+export RPC_URL=https://base-sepolia-rpc.publicnode.com PRIVATE_KEY=<deployer key>
+npm run costs                                  # cost table at $1k, $10k, $100k
+npm run trade:testnet -- USDC EURC 10000       # one live swap, prints cost and tx
+npm run depeg:testnet -- halt USDe 0.93        # guardian halt plus a $0.93 market price
+npm run depeg:testnet -- sell USDe 5000        # ranges refuse USDe, backstops buy it
+npm run depeg:testnet -- resume USDe
+```
+
+Real coins on Sepolia never depeg, so the oracle owner plays the part with a guardian halt; on mainnet the same halt comes from Chainlink CRE. Logs in `docs/evidence/sepolia-costs.txt` and `docs/evidence/sepolia-depeg.txt`.
+
+## Deploy to Base Sepolia
+
+1inch has not deployed Aqua or the SwapVM router on Base Sepolia, so the deploy script deploys their unmodified source next to Stabrix, with mock stablecoins and testnet FX feeds. Chainlink's CRE simulation forwarder is already there.
+
+```bash
+cd contracts
+PRIVATE_KEY=<key> CRE_FORWARDER=0x82300bd7c3958625581cc2F77bC6464dcEcDF3e5 \
+CRE_WORKFLOW_OWNER=0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa \
+  forge script script/Deploy.s.sol --tc Deploy --rpc-url https://sepolia.base.org --broadcast
+cd ../ops
+export RPC_URL=https://base-sepolia-rpc.publicnode.com PRIVATE_KEY=<key>
+npm run sync-feeds
+npm run seed:testnet
+npm run cre-config -- testnet
+cd ../cre && cre workflow simulate depeg-sentinel -T testnet-settings --broadcast --non-interactive --trigger-index 0
+```
+
+This writes `deployments/84532.json`. `https://sepolia.base.org` limits `eth_getLogs` to 200 blocks, which is too small for strategy discovery, so ops and the app read through `https://base-sepolia-rpc.publicnode.com`. `0xaAaA...aAaA` is the owner the CRE simulator reports as; a production deploy sets the real workflow owner instead. `sync-feeds` copies today's Base mainnet Chainlink EUR, BRL and IDR rates into the testnet feeds. With `--broadcast` the simulation sends a real transaction from `CRE_ETH_PRIVATE_KEY` in `cre/.env`, so on Base Sepolia that must be your own key with test ETH, never a public anvil key.
 
 ## Hosting
 
-The app runs on Vercel's free tier with the project root set to `app`. The selected deployment file is bundled with the `/api/deployment` route.
+The app runs on Vercel's free tier: import the repo, set Root Directory to `app`, add the variables below, deploy. The selected deployment file is bundled with the `/api/deployment` route. Leave `NEXT_PUBLIC_DEV_ACCOUNTS` unset on any hosted build.
 
 | Variable | Testnet | Mainnet |
 |---|---|---|
 | `DEPLOYMENT_NAME` | `84532` | `8453` |
-| `NEXT_PUBLIC_RPC_URL` | `https://sepolia.base.org` | `https://mainnet.base.org` |
+| `NEXT_PUBLIC_RPC_URL` | `https://base-sepolia-rpc.publicnode.com` | `https://base-rpc.publicnode.com` |
 
 ## Tests
 
@@ -196,7 +218,7 @@ npm test -w @stabrix/sdk
 cd cre/depeg-sentinel && go test ./...
 ```
 
-Contracts: 71 local tests and 9 Base mainnet fork tests, with fuzzing for LP value, round trips, rate moves and wallet shortfalls. SDK: 144 tests, including byte-for-byte parity with Solidity on generated range and backstop cases. Workflow: 21 tests for the halt policy, price parsing, consensus masks and report encoding.
+Contracts: 71 local tests and 9 Base mainnet fork tests, with fuzzing for LP value, round trips, rate moves and wallet shortfalls. SDK: 145 tests, including byte-for-byte parity with Solidity on generated range and backstop cases. Workflow: 21 tests for the halt policy, price parsing, consensus masks and report encoding.
 
 ## Limitations
 
