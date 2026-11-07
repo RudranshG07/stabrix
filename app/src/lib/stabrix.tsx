@@ -2,7 +2,7 @@
 
 import { type Deployment, StabrixClient } from '@stabrix/sdk'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
-import { type ReactNode, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   type Account,
   type Address,
@@ -20,7 +20,7 @@ import {
 import { privateKeyToAccount } from 'viem/accounts'
 import { Button } from '@/components/ui'
 import { fetchActivity } from './activity'
-import { ANVIL_ACCOUNTS, DEV_ACCOUNTS, POLL_MS, PRICE_API, RPC_URL } from './config'
+import { ANVIL_ACCOUNTS, DEV_ACCOUNTS, POLL_MS, PRICE_API, PUBLIC_RPCS, RPC_URL } from './config'
 import { type Eip1193, type WalletOption, onChain, rememberWallet, rememberedWallet, switchChain, useWalletOptions, walletError } from './wallets'
 
 export type Wallet = WalletClient<Transport, Chain, Account>
@@ -31,6 +31,7 @@ export type Signer =
 
 interface StabrixContext {
   deployment: Deployment
+  rpcUrl: string
   chain: Chain
   publicClient: PublicClient
   client: StabrixClient
@@ -49,17 +50,54 @@ const EXPLORERS: Record<number, string> = { 8453: 'https://basescan.org', 84532:
 
 interface RawDeployment extends Omit<Deployment, 'fromBlock'> {
   fromBlock: number | string
+  network: string
+  available: string[]
 }
 
-async function fetchDeployment(): Promise<Deployment> {
-  const res = await fetch('/api/deployment', { cache: 'no-store' })
+interface Loaded {
+  deployment: Deployment
+  network: string
+  available: string[]
+}
+
+async function fetchDeployment(network: string): Promise<Loaded> {
+  const res = await fetch(`/api/deployment${network ? `?network=${encodeURIComponent(network)}` : ''}`, { cache: 'no-store' })
   const body = await res.json()
   if (!res.ok) throw new Error(body.error ?? 'deployment unavailable')
-  const raw = body as RawDeployment
+  const { network: name, available, ...raw } = body as RawDeployment
   return {
-    ...raw,
-    fromBlock: BigInt(raw.fromBlock),
-    tokens: raw.tokens.map((t) => ({ ...t, address: getAddress(t.address) })),
+    network: name,
+    available,
+    deployment: {
+      ...raw,
+      fromBlock: BigInt(raw.fromBlock),
+      tokens: raw.tokens.map((t) => ({ ...t, address: getAddress(t.address) })),
+    },
+  }
+}
+
+const NETWORK_KEY = 'stabrix.network'
+
+interface NetworkContext {
+  network: string | null
+  current: string | null
+  available: string[]
+  select: (network: string) => void
+}
+
+const NetCtx = createContext<NetworkContext>({ network: null, current: null, available: [], select: () => {} })
+
+const newQueryClient = () => new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } })
+
+export function useNetwork() {
+  return useContext(NetCtx)
+}
+
+function initialNetwork() {
+  try {
+    return new URL(window.location.href).searchParams.get('network') ?? localStorage.getItem(NETWORK_KEY) ?? ''
+  } catch {
+    return ''
   }
 }
 
@@ -69,22 +107,22 @@ declare global {
   }
 }
 
-function Inner({ deployment, children }: { deployment: Deployment; children: ReactNode }) {
+function Inner({ deployment, rpcUrl, children }: { deployment: Deployment; rpcUrl: string; children: ReactNode }) {
   const chain = useMemo(
     () =>
       defineChain({
         id: deployment.chainId,
         name: CHAIN_NAMES[deployment.chainId] ?? `Chain ${deployment.chainId}`,
         nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-        rpcUrls: { default: { http: [RPC_URL] } },
+        rpcUrls: { default: { http: [rpcUrl] } },
         blockExplorers: EXPLORERS[deployment.chainId] ? { default: { name: 'Basescan', url: EXPLORERS[deployment.chainId]! } } : undefined,
         contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } },
       }),
-    [deployment.chainId],
+    [deployment.chainId, rpcUrl],
   )
   const publicClient = useMemo(
-    () => createPublicClient({ chain, transport: http(RPC_URL, { batch: true }) }) as PublicClient,
-    [chain],
+    () => createPublicClient({ chain, transport: http(rpcUrl, { batch: true }) }) as PublicClient,
+    [chain, rpcUrl],
   )
   const client = useMemo(() => new StabrixClient(publicClient, deployment), [publicClient, deployment])
 
@@ -107,7 +145,7 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
     if (signer.kind === 'dev') {
       const entry = ANVIL_ACCOUNTS.find((a) => a.index === signer.index)
       if (!entry) return null
-      return createWalletClient({ chain, account: privateKeyToAccount(entry.key), transport: http(RPC_URL) })
+      return createWalletClient({ chain, account: privateKeyToAccount(entry.key), transport: http(rpcUrl) })
     }
     if (!provider) return null
     return createWalletClient({
@@ -115,7 +153,7 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
       account: { address: signer.address, type: 'json-rpc' } as Account,
       transport: custom(onChain(provider, chain)),
     }) as Wallet
-  }, [signer, chain, provider])
+  }, [signer, chain, provider, rpcUrl])
 
   useEffect(() => {
     if (reconnected.current || signer || wallets.length === 0) return
@@ -169,24 +207,40 @@ function Inner({ deployment, children }: { deployment: Deployment; children: Rea
     rememberWallet(null)
   }
 
-  const value = { deployment, chain, publicClient, client, signer, wallet, setSigner, wallets, connectInjected, disconnect }
+  const value = { deployment, rpcUrl, chain, publicClient, client, signer, wallet, setSigner, wallets, connectInjected, disconnect }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
 function useDeploymentQuery() {
-  return useQuery({ queryKey: ['deployment'], queryFn: fetchDeployment, retry: 1, staleTime: Number.POSITIVE_INFINITY })
+  const { network } = useNetwork()
+  return useQuery({
+    queryKey: ['deployment', network],
+    queryFn: () => fetchDeployment(network ?? ''),
+    enabled: network !== null,
+    retry: 1,
+    staleTime: Number.POSITIVE_INFINITY,
+  })
 }
 
-function Loader({ children }: { children: ReactNode }) {
+function Loader({ children, onLoad }: { children: ReactNode; onLoad: (current: string, available: string[]) => void }) {
   const { data } = useDeploymentQuery()
-  return data ? <Inner deployment={data}>{children}</Inner> : <>{children}</>
+  useEffect(() => {
+    if (data) onLoad(data.network, data.available)
+  }, [data, onLoad])
+  if (!data) return <>{children}</>
+  const rpcUrl = data.available.length > 1 ? (PUBLIC_RPCS[data.deployment.chainId] ?? RPC_URL) : RPC_URL
+  return (
+    <Inner deployment={data.deployment} rpcUrl={rpcUrl}>
+      {children}
+    </Inner>
+  )
 }
 
 export function RequireDeployment({ children }: { children: ReactNode }) {
   const ctx = useContext(Ctx)
-  const { error, isLoading, refetch } = useDeploymentQuery()
+  const { error, isPending, refetch } = useDeploymentQuery()
   if (ctx) return <>{children}</>
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="py-12" aria-busy="true">
         <div className="h-7 w-48 animate-pulse rounded-lg bg-surface-hover" />
@@ -207,11 +261,28 @@ export function RequireDeployment({ children }: { children: ReactNode }) {
 }
 
 export function StabrixProvider({ children }: { children: ReactNode }) {
-  const [qc] = useState(() => new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } }))
+  const [network, setNetwork] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState<{ current: string | null; available: string[] }>({ current: null, available: [] })
+  const [qc, setQc] = useState(newQueryClient)
+  useEffect(() => setNetwork(initialNetwork()), [])
+  const onLoad = useCallback((current: string, available: string[]) => setLoaded({ current, available }), [])
+  const select = useCallback((next: string) => {
+    try {
+      localStorage.setItem(NETWORK_KEY, next)
+      const url = new URL(window.location.href)
+      url.searchParams.set('network', next)
+      window.history.replaceState(null, '', url)
+    } catch {}
+    setQc(newQueryClient())
+    setNetwork(next)
+  }, [])
+  const net = useMemo(() => ({ network, ...loaded, select }), [network, loaded, select])
   return (
-    <QueryClientProvider client={qc}>
-      <Loader>{children}</Loader>
-    </QueryClientProvider>
+    <NetCtx.Provider value={net}>
+      <QueryClientProvider client={qc}>
+        <Loader onLoad={onLoad}>{children}</Loader>
+      </QueryClientProvider>
+    </NetCtx.Provider>
   )
 }
 

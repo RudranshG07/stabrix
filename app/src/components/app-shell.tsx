@@ -4,8 +4,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
-import { RequireDeployment, useMaybeStabrix, useOracleStatus, useStabrix } from '@/lib/stabrix'
-import { DEV_ACCOUNTS } from '@/lib/config'
+import { RequireDeployment, useMaybeStabrix, useNetwork, useOracleStatus, useStabrix } from '@/lib/stabrix'
+import { DEV_ACCOUNTS, NETWORK_LABELS } from '@/lib/config'
 import { AccountMenu } from './account-menu'
 import { ThemeToggle } from './theme-toggle'
 
@@ -37,6 +37,30 @@ function NetworkPill() {
       <span className={`size-2 rounded-full ${halted ? 'bg-down' : 'bg-up'}`} aria-hidden />
       <span className="text-muted">{chain.name}</span>
       <span>{halted ? `${halted} halted` : 'Pegs live'}</span>
+    </div>
+  )
+}
+
+function NetworkSwitch({ className = '' }: { className?: string }) {
+  const { current, available, select } = useNetwork()
+  if (available.length < 2) return null
+  return (
+    <div role="radiogroup" aria-label="Network" className={`${className} min-h-9 shrink-0 items-center rounded-lg border border-line bg-surface p-0.5 text-[12.5px]`}>
+      {available.map((n) => {
+        const on = n === current
+        return (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => !on && select(n)}
+            className={`rounded-md px-2.5 py-1.5 transition-colors ${on ? 'bg-ink text-paper' : 'text-muted hover:text-ink'}`}
+          >
+            {NETWORK_LABELS[n] ?? n}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -74,13 +98,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="text-[18px] font-semibold tracking-[-0.02em]">Stabrix</span>
           </Link>
           <Nav path={path} className="hidden gap-7 lg:flex" />
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <NetworkSwitch className="hidden sm:flex" />
             {ctx && <NetworkPill />}
             <ThemeToggle className="grid size-9 shrink-0 place-items-center rounded-lg border border-line bg-surface transition-colors hover:bg-surface-hover [&>svg]:size-4" />
             {ctx && <AccountMenu />}
           </div>
         </div>
-        <Nav path={path} className="flex gap-4 overflow-x-auto border-t border-line px-4 py-1 sm:justify-center sm:gap-7 lg:hidden" />
+        <div className="flex items-center gap-3 border-t border-line px-4 py-1 lg:hidden">
+          <Nav path={path} className="flex min-w-0 flex-1 gap-4 overflow-x-auto sm:justify-center sm:gap-7" />
+          <NetworkSwitch className="flex sm:hidden" />
+        </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 pt-10 pb-24 sm:px-6">
         {path === '/docs' ? children : <RequireDeployment>{children}</RequireDeployment>}

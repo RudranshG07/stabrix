@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { DEV_ACCOUNTS } from '@/lib/config'
+import { DEV_ACCOUNTS, NETWORK_LABELS } from '@/lib/config'
 
 interface Raw {
+  network: string
+  available: string[]
   chainId: number
   officialAqua?: boolean
   aqua: string
@@ -22,17 +24,25 @@ const NETWORKS: Record<number, { name: string; explorer: string }> = {
   84532: { name: 'Base Sepolia', explorer: 'https://sepolia.basescan.org/address/' },
 }
 
+const load = (network?: string): Promise<Raw | null> =>
+  fetch(`/api/deployment${network ? `?network=${network}` : ''}`, { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)
+
 export function Deployed() {
-  const [d, setD] = useState<Raw | null>(null)
+  const [all, setAll] = useState<Raw[]>([])
+  const [pick, setPick] = useState(0)
 
   useEffect(() => {
     if (DEV_ACCOUNTS) return
-    fetch('/api/deployment', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: Raw | null) => setD(j && NETWORKS[j.chainId] ? j : null))
-      .catch(() => setD(null))
+    load().then(async (first) => {
+      if (!first) return
+      const rest = await Promise.all(first.available.filter((n) => n !== first.network).map((n) => load(n)))
+      setAll([first, ...rest].filter((j): j is Raw => !!j && !!NETWORKS[j.chainId]))
+    })
   }, [])
 
+  const d = all[pick] ?? all[0]
   if (!d) return null
   const net = NETWORKS[d.chainId]!
   const official = d.officialAqua !== false
@@ -53,6 +63,15 @@ export function Deployed() {
         <p className="eb">Deployed</p>
         <h2>Live on {net.name}</h2>
         <p className="intro">Chain {d.chainId}. Every address links to the explorer.</p>
+        {all.length > 1 && (
+          <div className="ch-tabs" role="radiogroup" aria-label="Network">
+            {all.map((n, k) => (
+              <button key={n.network} type="button" role="radio" aria-checked={n === d} onClick={() => setPick(k)}>
+                {NETWORK_LABELS[n.network] ?? n.network}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
       <ul className="addr">
         {rows.map(([name, what, addr]) => (

@@ -195,6 +195,7 @@ html.sw.fine .swp #cur,html.sw.fine .swp #ping{display:block}
 .swp .ch-tabs{display:inline-flex;gap:4px;padding:4px;border:2px solid var(--line);border-radius:999px;background:var(--paper)}
 .swp .ch-tabs button{font:600 13.5px/1 "Josefin Sans",sans-serif;text-transform:uppercase;padding:11px 16px 8px;border:0;border-radius:999px;background:transparent;color:var(--ink);cursor:pointer}
 .swp .ch-tabs button[aria-checked=true]{background:var(--ink);color:var(--on-ink)}
+.swp .sec-head .ch-tabs{margin-top:18px}
 .swp .ch-slider{display:flex;flex-direction:column;gap:8px;min-width:260px;flex:1;max-width:420px;font:700 11px/1 "Open Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase}
 .swp .ch-slider b{font:500 20px/1 "EB Garamond",serif;letter-spacing:0;text-transform:none}
 .swp .ch-slider input{width:100%;accent-color:var(--ink);cursor:pointer}
