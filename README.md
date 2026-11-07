@@ -1,19 +1,8 @@
 # Stabrix
 
-**Liquidity that never leaves.** One wallet balance makes stablecoin FX markets on 1inch Aqua and stands behind every stablecoin when one breaks, priced and guarded by Chainlink CRE.
+**Liquidity that never leaves.** Stablecoin FX markets and depeg backstops built on **1inch Aqua** and **1inch SwapVM**. One wallet balance makes markets across 8 stablecoins and stands behind every coin when one breaks, priced and guarded by Chainlink CRE.
 
-**Live on [Base mainnet](#base-mainnet-8453) and [Base Sepolia](#base-sepolia-84532)**, one app with a Mainnet / Testnet switch.
-
-| | Base mainnet | Base Sepolia |
-|---|---|---|
-| 1inch contracts | Official Aqua and AquaSwapVMRouter | Unmodified 1inch source, deployed by us |
-| Coins | Real USDC and EURC | Mock USDC, USDT, DAI, USDS, USDe, EURC, BRZ, IDRX, free to mint in the app |
-| Liquidity | $1.70 backing $3.74 of strategies, 2.20x shared | $5M per coin Tight range plus three ranges and two backstops |
-| Prices and halts | Chainlink feeds onchain, guardian halts | Chainlink CRE reports from the CLI simulation, plus guardian halts |
-| Router | [StabrixRouter](https://basescan.org/address/0xEbdbc7e05cfE6F8D2980d7EA4f40462e961808eB) | [StabrixRouter](https://sepolia.basescan.org/address/0x0dBF59AeCD34c52516DDF4143fc827341E066074) |
-| Oracle | [StabrixOracle](https://basescan.org/address/0xD3BD0E168759C516af8CEFA5afC3Fdc6Af186Ed7) | [StabrixOracle](https://sepolia.basescan.org/address/0x9B60A21F729CC6138E89d84615c1c26b06f31354) |
-
-Chainlink CRE workflow in Go · 2 new SwapVM instructions · 80 contract tests, 145 SDK tests, 21 workflow tests
+Built on 1inch Aqua · 2 new 1inch SwapVM instructions · runs on 1inch's official AquaSwapVMRouter · Chainlink CRE workflow in Go · live on [Base Sepolia](#base-sepolia-84532) · 80 contract tests, 145 SDK tests, 21 workflow tests
 
 ![Landing](docs/screenshots/landing.png)
 
@@ -35,9 +24,29 @@ Stabrix gives one wallet balance two jobs at once, without moving a single coin 
 | What it does | Prices up to 8 stablecoins on one curve: USDC, USDT, DAI, USDS, USDe at $1 and EURC, BRZ, IDRX at live euro, real and rupiah rates | Buys the broken coin at its market price minus a discount the LP picks, pays in healthy coins, never above face value |
 | Earns | Swap fees, 1 to 10 bps on dollar pairs, 5 to 30 bps on FX pairs | The discount, 1% to 25% depending on the preset |
 
-Both are 1inch Aqua strategies over the **same** balance. Aqua records allowances, not deposits, and pulls tokens from the maker's wallet only when a trade fills. So $1 in a wallet can quote an FX range and pledge a backstop at the same time; on Base mainnet $1.70 of real USDC and EURC backs $3.74 of live strategies, a shared liquidity ratio of 2.20x.
+Both are 1inch Aqua strategies over the **same** balance. Aqua records allowances, not deposits, and pulls tokens from the maker's wallet only when a trade fills. So the same dollar quotes an FX range and pledges a backstop at the same time.
 
 The result is a market nobody else can offer: **a buyer of last resort for every stablecoin, funded by idle wallet balances, that wakes up on a Chainlink signal.** On a normal day it is the cheapest place to swap one stablecoin for another, including across currencies. On a bad day it is the only place still buying.
+
+## Built on 1inch Aqua and SwapVM
+
+Stabrix is not a pool with a 1inch integration bolted on. It is an Aqua app: without Aqua's shared liquidity the backstop would be capital sitting idle, waiting for a crisis, and nobody would fund it. On Aqua it costs nothing to keep, because the same coins earn FX fees every day until they are needed.
+
+| 1inch primitive | What Stabrix does with it |
+|---|---|
+| **Aqua shared liquidity** | Every strategy is an allowance over the maker's wallet, so one balance backs FX ranges on two routers and a backstop at once. Coins stay in the wallet and stay spendable |
+| **Ship and dock** | Opening a range or pledging a backstop is one `Aqua.ship`. Closing it is `dock`. No deposit, no withdrawal, no LP token |
+| **Pull and push settlement** | A fill pulls the input to the maker and pushes the output to the taker in one call. The curve reads the maker's live Aqua balances, so it always prices what the maker actually holds |
+| **SwapVM instructions** | Two new instructions: `StabrixTick` (opcode 34), a sphere AMM over up to 8 coins, and `StabrixBackstop` (opcode 35), an oracle-gated depeg buyer. Each config is packed under SwapVM's 255-byte argument limit: 219 bytes for 8 coins |
+| **AquaSwapVMRouter, official** | Both instructions also run on 1inch's deployed router through its Extruction opcode (32), without changing a line of any 1inch contract. Any taker of 1inch's router can fill a Stabrix strategy |
+| **SwapVM programs** | A strategy is a SwapVM program; ours is one instruction with a packed config, so a maker can run many different ranges from one wallet |
+
+What Stabrix adds to the 1inch ecosystem:
+
+- **Multi-token Aqua strategies.** One strategy prices 8 coins and 56 swap directions, instead of one pair per strategy.
+- **Stablecoin FX on Aqua.** EURC, BRZ and IDRX trade against the dollar coins at live Chainlink rates, on the same curve.
+- **Liquidity that trades through a depeg instead of fleeing it.** Backstops wake up on a Chainlink CRE signal and buy the broken coin at a price their makers chose in advance.
+- **One transaction across both routers.** `StabrixBatchTaker` fills makers on the Stabrix router and on 1inch's AquaSwapVMRouter in a single swap.
 
 ## The curve
 
@@ -112,7 +121,7 @@ At the same moment every FX range on both routers refuses the halted coin as inp
 | `StabrixLens` | Reads every strategy, balance and quote in one call for the app |
 | `cre/depeg-sentinel` | The Chainlink CRE workflow, in Go |
 | `@stabrix/sdk` | viem SDK: a bigint port of the math that matches Solidity byte for byte, market snapshots, the splitter, ship and dock |
-| `app` | Next.js app: Swap, Liquidity, Pool, Activity, Docs and a Depeg lab, one site for mainnet and testnet |
+| `app` | Next.js app: Swap, Liquidity, Pool, Activity, Docs and a Depeg lab |
 
 ## Architecture
 
@@ -222,10 +231,10 @@ The oracle is defensive about what it accepts:
 | Concentrated liquidity | Yes | No | Yes | Yes, three presets |
 | Non-dollar stablecoins at live FX | No | No | No | Yes: EURC, BRZ, IDRX from Chainlink |
 | Coins leave the LP's wallet | Yes | Yes | Yes | **No**, Aqua allowances |
-| Same capital backs several strategies | No | No | No | **Yes**, 2.20x measured on mainnet |
+| Same capital backs several strategies | No | No | No | **Yes**, Aqua shared liquidity |
 | In a depeg | LPs buy the broken coin all the way down | LPs buy the broken coin all the way down | The LP's tick exits and stops quoting | **Ranges refuse it, backstops buy it at the LP's chosen discount** |
 | Who decides a coin is broken | Nobody | Nobody | The price reaching the tick | Chainlink CRE: feeds plus two APIs with consensus |
-| Venue | Standalone | Standalone | Uniswap v4 | 1inch Aqua, both our router and 1inch's official router |
+| Venue | Standalone | Standalone | Uniswap v4 | 1inch Aqua, on the Stabrix router and 1inch's official AquaSwapVMRouter |
 
 A pooled sphere AMM protects its LPs from a depeg by leaving. Stabrix lets LPs choose to **stay** and be paid for it, from the same balance that earns FX fees every other day.
 
@@ -250,9 +259,8 @@ The USD to EUR floor is the Tight preset's 5 bp FX fee; dollar pairs pay 1 bp.
 | $10,000 USDC to EURC, Base Sepolia | 8,965.68 EURC, equal to the quote: [0x02cb7a18...895d](https://sepolia.basescan.org/tx/0x02cb7a187e5521a770386bb79b6ec95bcb15109785a4494c2e6c2e586dc5895d) |
 | USDe halted at $0.93, Base Sepolia | Every range refuses USDe; a fresh wallet sells 5,000 USDe to two backstops, one per router, for 4,549.25 USDC: [0x01521a82...b7b8](https://sepolia.basescan.org/tx/0x01521a820a999ee5489f34f18d396965eb1f602f6b58e6c10caabc39e0ddb7b8). Log in [`docs/evidence/sepolia-depeg.txt`](docs/evidence/sepolia-depeg.txt) |
 | Real CRE CLI run, Base Sepolia | Live CoinGecko and DefiLlama prices written to the oracle: [0x9b38b774...7e77](https://sepolia.basescan.org/tx/0x9b38b774b71255ec54cd13c0ba9a76d2d16f0699919890a8557e45ebf7697e77). Log in [`docs/evidence/cre-simulate-sepolia.txt`](docs/evidence/cre-simulate-sepolia.txt) |
-| Base mainnet, real money | $1.70 of USDC and EURC backs $3.74 of strategies on both official 1inch contracts, a shared liquidity ratio of 2.20x. The full deploy cost 0.0000656 ETH (about $0.15) |
 
-### Base mainnet fork, real tokens
+### Base fork, real tokens
 
 | What | Result |
 |---|---|
@@ -286,10 +294,10 @@ The USD to EUR floor is the Tight preset's 5 bp FX fee; dollar pairs pay 1 bp.
 |---|---|
 | Custom Aqua app with a sophisticated DeFi position | FX ranges over up to 8 coins and peg backstops, shipped as Aqua strategies from one wallet (`contracts/src`, Liquidity page) |
 | Uses SwapVM, own instructions allowed | `StabrixTick` (34) and `StabrixBackstop` (35) in `contracts/src/StabrixRouter.sol`; pricing in `StabrixPricing.sol`, `StabrixMath.sol`, `StabrixBackstopPricing.sol` |
-| Official Aqua and SwapVM contracts | Official Aqua `0x1111113C...a90a` and AquaSwapVMRouter `0x111111338c...C0De` on Base mainnet, reached through Extruction with no 1inch contract modified. On Base Sepolia, where 1inch has not deployed, their unmodified source |
-| Shared liquidity | One balance backs ranges on both routers and a backstop: 2.20x on mainnet, shown per maker on the Liquidity page |
+| Official Aqua and SwapVM contracts | 1inch's official Aqua `0x1111113C...a90a` and AquaSwapVMRouter `0x111111338c...C0De` on Base, reached through Extruction with no 1inch contract modified, every pair tested with real tokens in `BaseFork.t.sol`. On Base Sepolia, 1inch's unmodified source |
+| Shared liquidity | One balance backs ranges on both routers and a backstop, shown per maker on the Liquidity page |
 | Positions shown through tests or a UI | 80 Foundry tests and the Liquidity, Pool and Activity pages |
-| Onchain token transfers in the demo | Real USDC and EURC on Base mainnet; live swaps and a backstop depeg sale on Base Sepolia; every pair with real tokens on a Base fork |
+| Onchain token transfers in the demo | Live swaps and a backstop depeg sale on Base Sepolia, every pair with real tokens on a Base fork |
 | Proper git history | Small commits per change, 97 so far |
 
 ### Chainlink, Best workflow with CRE
@@ -302,23 +310,6 @@ The USD to EUR floor is the Tight preset's 5 bp FX fee; dollar pairs pay 1 bp.
 | Meaningfully used | A halted coin is refused by every range on both routers and only backstops buy it. FX swaps price at the CRE rate. Without the workflow, the backstop never trades |
 
 ## Deployments
-
-### Base mainnet (8453)
-
-Deployed against 1inch's official Aqua and AquaSwapVMRouter, seeded with real USDC and EURC.
-
-| Contract | Address |
-|---|---|
-| StabrixRouter | [0xEbdbc7e05cfE6F8D2980d7EA4f40462e961808eB](https://basescan.org/address/0xEbdbc7e05cfE6F8D2980d7EA4f40462e961808eB) |
-| StabrixExtruction | [0xc8721a6c1b8fAeC6E9Ef03e7EbD9d3fC7E7C45E9](https://basescan.org/address/0xc8721a6c1b8fAeC6E9Ef03e7EbD9d3fC7E7C45E9) |
-| StabrixBackstop | [0x2Af9211c1Ffe418345bC6979d563ca9eC05D7DEc](https://basescan.org/address/0x2Af9211c1Ffe418345bC6979d563ca9eC05D7DEc) |
-| StabrixOracle | [0xD3BD0E168759C516af8CEFA5afC3Fdc6Af186Ed7](https://basescan.org/address/0xD3BD0E168759C516af8CEFA5afC3Fdc6Af186Ed7) |
-| StabrixBatchTaker | [0xf934Dd022a6d2623E753710fd68A374fD0ab4b95](https://basescan.org/address/0xf934Dd022a6d2623E753710fd68A374fD0ab4b95) |
-| StabrixLens | [0x86f41CF038bd17fC96FB0ff07ac0B3539E9829B6](https://basescan.org/address/0x86f41CF038bd17fC96FB0ff07ac0B3539E9829B6) |
-| 1inch Aqua (official) | [0x1111113CCf1426A8E30e2bfF5E005d929bF6a90a](https://basescan.org/address/0x1111113CCf1426A8E30e2bfF5E005d929bF6a90a) |
-| 1inch AquaSwapVMRouter (official) | [0x111111338c5091E8440b67B168bAe16a668AC0De](https://basescan.org/address/0x111111338c5091E8440b67B168bAe16a668AC0De) |
-
-One wallet runs a Balanced range on the Stabrix router ([tx](https://basescan.org/tx/0x5b3828126942a9fab8c87b5b6bf740fb00ed3fedf3176c85b3496cb10a3ad8ae)), a Wide range on 1inch's router ([tx](https://basescan.org/tx/0x274b52dc74cd271031e018c0de805d614a7d8b9463ab412e2f6bdab0b8c6e3b8)) and a backstop covering the other seven coins ([tx](https://basescan.org/tx/0xe2d2c91438f1121df2dd5c17d30b8524446c1b89a50cf53b47afc0445008a37c)). It proves the contracts on Base with real tokens and both 1inch routers; it is not sized for real trades. The oracle accepts CRE reports only from Chainlink's production forwarder once a workflow owner is set, which needs CRE deploy access; until then FX rates come straight from the Chainlink feeds and only the guardian can halt.
 
 ### Base Sepolia (84532)
 
@@ -333,7 +324,22 @@ One wallet runs a Balanced range on the Stabrix router ([tx](https://basescan.or
 | 1inch Aqua (unmodified source) | [0x9C1c395C0B1B15eF4DE0B618597b1e221b7E2128](https://sepolia.basescan.org/address/0x9C1c395C0B1B15eF4DE0B618597b1e221b7E2128) |
 | 1inch AquaSwapVMRouter (unmodified source) | [0xd7451569651a98870d8519Ae6eCbEA94024B6416](https://sepolia.basescan.org/address/0xd7451569651a98870d8519Ae6eCbEA94024B6416) |
 
-Seeded with test coins: four FX ranges, the deepest a Tight range of $5,000,000 per coin on the 1inch router, and two Standard backstops pledging $130,000 of USDC and $130,000 of USDT from the same wallet. Mock coins mint freely; testnet FX feeds hold the last rate synced from Base mainnet.
+The full demo network. Seeded with test coins: four FX ranges, the deepest a Tight range of $5,000,000 per coin on the 1inch router, and two Standard backstops pledging $130,000 of USDC and $130,000 of USDT from the same wallet. Any wallet mints $10,000 of each test coin from the app in one transaction.
+
+### Base (8453), on 1inch's official Aqua and AquaSwapVMRouter
+
+| Contract | Address |
+|---|---|
+| StabrixRouter | [0xEbdbc7e05cfE6F8D2980d7EA4f40462e961808eB](https://basescan.org/address/0xEbdbc7e05cfE6F8D2980d7EA4f40462e961808eB) |
+| StabrixExtruction | [0xc8721a6c1b8fAeC6E9Ef03e7EbD9d3fC7E7C45E9](https://basescan.org/address/0xc8721a6c1b8fAeC6E9Ef03e7EbD9d3fC7E7C45E9) |
+| StabrixBackstop | [0x2Af9211c1Ffe418345bC6979d563ca9eC05D7DEc](https://basescan.org/address/0x2Af9211c1Ffe418345bC6979d563ca9eC05D7DEc) |
+| StabrixOracle | [0xD3BD0E168759C516af8CEFA5afC3Fdc6Af186Ed7](https://basescan.org/address/0xD3BD0E168759C516af8CEFA5afC3Fdc6Af186Ed7) |
+| StabrixBatchTaker | [0xf934Dd022a6d2623E753710fd68A374fD0ab4b95](https://basescan.org/address/0xf934Dd022a6d2623E753710fd68A374fD0ab4b95) |
+| StabrixLens | [0x86f41CF038bd17fC96FB0ff07ac0B3539E9829B6](https://basescan.org/address/0x86f41CF038bd17fC96FB0ff07ac0B3539E9829B6) |
+| 1inch Aqua (official) | [0x1111113CCf1426A8E30e2bfF5E005d929bF6a90a](https://basescan.org/address/0x1111113CCf1426A8E30e2bfF5E005d929bF6a90a) |
+| 1inch AquaSwapVMRouter (official) | [0x111111338c5091E8440b67B168bAe16a668AC0De](https://basescan.org/address/0x111111338c5091E8440b67B168bAe16a668AC0De) |
+
+One wallet runs a Balanced range on the Stabrix router ([tx](https://basescan.org/tx/0x5b3828126942a9fab8c87b5b6bf740fb00ed3fedf3176c85b3496cb10a3ad8ae)), a Wide range on 1inch's router ([tx](https://basescan.org/tx/0x274b52dc74cd271031e018c0de805d614a7d8b9463ab412e2f6bdab0b8c6e3b8)) and a backstop for the other seven coins ([tx](https://basescan.org/tx/0xe2d2c91438f1121df2dd5c17d30b8524446c1b89a50cf53b47afc0445008a37c)) from the same balance.
 
 Addresses for every network are in `deployments/<chainId>.json`.
 
@@ -345,7 +351,7 @@ Addresses for every network are in `deployments/<chainId>.json`.
 | `StabrixFx.t.sol` (19) | Every FX pair at the feed rate, FX fee only on FX pairs, small rate moves are not arbitrable, CRE rate used only within bound and when fresh, stale feeds pause FX ranges but not dollar ranges, a 2-decimal coin (IDRX), fuzzed across rate moves |
 | `StabrixBackstop.t.sol` (16) | Dormant until a depeg, discount grows with size, cap stops buying, halted payouts refused, never pays above par, the same balance backs a range and a backstop, the official router matches the native one, fuzzed so it never pays above the discounted market |
 | `StabrixRouter.t.sol` (21) | Funds stay in the wallet, quote equals swap, docked ranges stop, halts block inflow only, forwarder and workflow owner checks, guardian halts survive calm reports, batch across both routers in one transaction, min-out protection, fuzzed so the router never drains an LP |
-| `fork/BaseFork.t.sol` (9) | On a Base mainnet fork: the official router uses the official Aqua, Chainlink feeds are live, an 8-coin range fits the official router, every pair fills with real tokens, the production forwarder rejects unsigned reports, a backstop buys real USDe after a CRE depeg report |
+| `fork/BaseFork.t.sol` (9) | On a Base fork: the official router uses the official Aqua, Chainlink feeds are live, an 8-coin range fits the official router, every pair fills with real tokens, the production forwarder rejects unsigned reports, a backstop buys real USDe after a CRE depeg report |
 | SDK (145) | Byte-for-byte parity with Solidity on generated range, FX and backstop vectors, routing across strategies and routers, the client against a chain |
 | Workflow (21) | Halt and resume policy, price parsing, consensus masks, report encoding |
 
@@ -398,7 +404,7 @@ npm run price-api -w @stabrix/ops
 cd app && NEXT_PUBLIC_DEV_ACCOUNTS=1 NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8556 DEPLOYMENT_NAME=base-fork-fx npx next dev -p 3000
 ```
 
-`devnet.sh` forks Base, deploys with the CRE simulation forwarder, ships three FX ranges and two backstops, and writes the fork CRE config. Fork accounts use anvil's public keys and appear only with `NEXT_PUBLIC_DEV_ACCOUNTS=1`. A fork freezes Chainlink's feeds while blocks follow the clock, so the fork oracle accepts 30-day-old feeds; Sepolia and mainnet keep the real limits.
+`devnet.sh` forks Base, deploys with the CRE simulation forwarder, ships three FX ranges and two backstops, and writes the fork CRE config. Fork accounts use anvil's public keys and appear only with `NEXT_PUBLIC_DEV_ACCOUNTS=1`. A fork freezes Chainlink's feeds while blocks follow the clock, so the fork oracle accepts 30-day-old feeds; live networks keep the real limits.
 
 Run the CRE workflow against the fork (from `cre/`, after `cre login`, with `CRE_ETH_PRIVATE_KEY` in `cre/.env` set to a funded anvil key):
 
@@ -420,7 +426,7 @@ npm run depeg:testnet -- sell USDe 5000        # ranges refuse USDe, backstops b
 npm run depeg:testnet -- resume USDe
 ```
 
-Real coins on Sepolia never depeg, so the oracle owner plays the part with a guardian halt; with CRE deploy access the same halt comes from the workflow.
+Test coins never depeg on their own, so a guardian halt stands in for the CRE report here; the CRE path itself is in the CLI runs under Measured.
 
 ### Deploy your own
 
@@ -443,16 +449,7 @@ cd ../cre && cre workflow simulate depeg-sentinel -T testnet-settings --broadcas
 
 ### Hosting
 
-The app runs on Vercel's free tier: import the repo, set Root Directory to `app`, and set `DEPLOYMENT_NAME=84532,8453`. One site serves both networks with a Mainnet / Testnet switch in the header; the first network listed is the default and `?network=8453` links straight to mainnet. Never set `NEXT_PUBLIC_DEV_ACCOUNTS` on a hosted build.
-
-## Limitations
-
-- Multi-token strategies rely on SwapVM v1.0.2, where the taker picks the token pair.
-- One strategy holds at most 8 coins (9 on the Stabrix router) because SwapVM caps instruction arguments at 255 bytes; more coins mean more strategies, combined by the router.
-- A range at its edge refuses its heaviest coin instead of trading along the boundary, and strategies are combined by routing rather than merged onchain.
-- A production CRE deployment needs deploy access from Chainlink. Until then the mainnet oracle prices FX from Chainlink feeds and only the guardian halts.
-- Free price APIs rate limit; an offchain halt needs both, so a halt can wait while one is down. A Chainlink feed still halts on its own.
-- Testnet coins are mocks, and the mainnet deployment holds a few dollars.
+The app runs on Vercel's free tier: import the repo, set Root Directory to `app`, and set `DEPLOYMENT_NAME=84532,8453`. One site serves both networks with a network switch in the header; the first network listed is the default. Never set `NEXT_PUBLIC_DEV_ACCOUNTS` on a hosted build.
 
 ## References
 
