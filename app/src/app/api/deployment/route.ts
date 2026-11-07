@@ -6,8 +6,8 @@ export const dynamic = 'force-dynamic'
 const clean = (s: string) => s.trim().replace(/[^a-z0-9-]/gi, '')
 
 function networks() {
-  const list = (process.env.DEPLOYMENTS ?? '').split(',').map(clean).filter(Boolean)
-  return list.length ? list : [clean(process.env.DEPLOYMENT_NAME ?? 'base-fork')]
+  const list = (process.env.DEPLOYMENT_NAME ?? '').split(',').map(clean).filter(Boolean)
+  return list.length ? list : ['base-fork']
 }
 
 export async function GET(req: Request) {

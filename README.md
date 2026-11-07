@@ -202,13 +202,13 @@ This writes `deployments/84532.json`. `https://sepolia.base.org` limits `eth_get
 
 ## Hosting
 
-The app runs on Vercel's free tier: import the repo, set Root Directory to `app`, add one variable, deploy.
+The app runs on Vercel's free tier: import the repo, set Root Directory to `app`, add the variable, deploy.
 
 | Variable | Value |
 |---|---|
-| `DEPLOYMENTS` | `84532,8453` |
+| `DEPLOYMENT_NAME` | `84532,8453` |
 
-One site serves both networks. A Mainnet / Testnet switch sits in the header, the first network in the list is the default, and `?network=8453` links straight to mainnet. Each network reads through its own RPC (`base-sepolia-rpc.publicnode.com` and `base-rpc.publicnode.com` by default, overridable with `NEXT_PUBLIC_RPC_URL_84532` and `NEXT_PUBLIC_RPC_URL_8453`), and a connected wallet switches chain with it. Leave `NEXT_PUBLIC_DEV_ACCOUNTS` unset on any hosted build. For a single network, set `DEPLOYMENT_NAME` and `NEXT_PUBLIC_RPC_URL` instead.
+One site serves both networks. A Mainnet / Testnet switch sits in the header, the first network in the list is the default, and `?network=8453` links straight to mainnet. Each network reads through its own RPC (`base-sepolia-rpc.publicnode.com` and `base-rpc.publicnode.com`), and a connected wallet switches chain with it. With a single value such as `DEPLOYMENT_NAME=84532` the site shows one network, read through `NEXT_PUBLIC_RPC_URL`. Leave `NEXT_PUBLIC_DEV_ACCOUNTS` unset on any hosted build.
 
 ## Tests
 
