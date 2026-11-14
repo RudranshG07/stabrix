@@ -7,6 +7,8 @@ interface Raw {
   network: string
   available: string[]
   chainId: number
+  kind?: 'solana'
+  programId?: string
   officialAqua?: boolean
   aqua: string
   router: string
@@ -19,9 +21,11 @@ interface Raw {
   tokens: { symbol: string; address: string }[]
 }
 
-const NETWORKS: Record<number, { name: string; explorer: string }> = {
-  8453: { name: 'Base', explorer: 'https://basescan.org/address/' },
-  84532: { name: 'Base Sepolia', explorer: 'https://sepolia.basescan.org/address/' },
+const NETWORKS: Record<number, { name: string; explorer: (a: string) => string }> = {
+  101: { name: 'Solana', explorer: (a) => `https://solscan.io/account/${a}` },
+  103: { name: 'Solana Devnet', explorer: (a) => `https://solscan.io/account/${a}?cluster=devnet` },
+  8453: { name: 'Base', explorer: (a) => `https://basescan.org/address/${a}` },
+  84532: { name: 'Base Sepolia', explorer: (a) => `https://sepolia.basescan.org/address/${a}` },
 }
 
 const load = (network?: string): Promise<Raw | null> =>
@@ -46,7 +50,12 @@ export function Deployed() {
   if (!d) return null
   const net = NETWORKS[d.chainId]!
   const official = d.officialAqua !== false
-  const rows: [string, string, string][] = [
+  const solanaRows: [string, string, string][] = [
+    ['Stabrix program', 'FX ranges and backstops, one Solana program', d.programId ?? ''],
+    ['Oracle', 'Pyth reference plus sentinel reports, guardian halts', d.oracle],
+    ...d.tokens.map((t): [string, string, string] => [t.symbol, 'Coin mint', t.address]),
+  ]
+  const rows: [string, string, string][] = d.kind === 'solana' ? solanaRows : [
     ['StabrixRouter', 'SwapVM router with opcodes 34 and 35', d.router],
     ['StabrixExtruction', 'FX range pricing for the 1inch router', d.extruction],
     ['StabrixBackstop', 'Backstop pricing for the 1inch router', d.backstop],
@@ -62,7 +71,7 @@ export function Deployed() {
       <header className="sec-head">
         <p className="eb">Deployed</p>
         <h2>Live on {net.name}</h2>
-        <p className="intro">Chain {d.chainId}. Every address links to the explorer.</p>
+        <p className="intro">{d.kind === 'solana' ? 'One program, one oracle, eight coin mints.' : `Chain ${d.chainId}.`} Every address links to the explorer.</p>
         {all.length > 1 && (
           <div className="ch-tabs" role="radiogroup" aria-label="Network">
             {all.map((n, k) => (
@@ -76,7 +85,7 @@ export function Deployed() {
       <ul className="addr">
         {rows.map(([name, what, addr]) => (
           <li key={name}>
-            <a href={`${net.explorer}${addr}`} target="_blank" rel="noreferrer">
+            <a href={net.explorer(addr)} target="_blank" rel="noreferrer">
               <b>{name}</b>
               <span>{what}</span>
               <code>

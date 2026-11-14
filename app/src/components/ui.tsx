@@ -94,7 +94,7 @@ export function Pill({
   )
 }
 
-const LOGOS = new Set(['USDC', 'USDT', 'DAI', 'USDS', 'USDe', 'EURC', 'BRZ', 'IDRX'])
+const LOGOS = new Set(['USDC', 'USDT', 'DAI', 'USDS', 'USDe', 'EURC', 'BRZ', 'IDRX', 'PYUSD', 'USDG'])
 
 export function CoinDot({ symbol, className = 'size-5' }: { symbol: string; className?: string }) {
   if (!LOGOS.has(symbol)) {
@@ -161,8 +161,9 @@ export function Tag({ children, dot }: { children: ReactNode; dot?: string }) {
   )
 }
 
-export function VenueTag({ kind }: { kind: 'native' | 'official' }) {
-  return kind === 'official' ? <Tag dot="var(--color-series-lime)">1inch router</Tag> : <Tag dot="var(--color-violet)">Stabrix router</Tag>
+export function VenueTag({ kind, solana = false }: { kind: 'native' | 'official'; solana?: boolean }) {
+  if (kind === 'official') return <Tag dot="var(--color-series-lime)">1inch router</Tag>
+  return <Tag dot="var(--color-violet)">{solana ? 'Solana program' : 'Stabrix router'}</Tag>
 }
 
 export function KindTag({ kind }: { kind: 'range' | 'backstop' }) {

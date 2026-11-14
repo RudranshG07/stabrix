@@ -176,7 +176,8 @@ function venueOf(id: VenueId, target: string): Venue {
 }
 
 function RangeForm({ held, balances, market }: { held: TokenInfo[]; balances: bigint[] | undefined; market: Market | undefined }) {
-  const { deployment, client, wallet } = useStabrix()
+  const { deployment, client, wallet, kind } = useStabrix()
+  const solana = kind === 'solana'
   const [picked, setPicked] = useState<string[] | null>(null)
   const [preset, setPreset] = useState<PresetId>('balanced')
   const [venue, setVenue] = useState<VenueId>('native')
@@ -202,6 +203,7 @@ function RangeForm({ held, balances, market }: { held: TokenInfo[]; balances: bi
   let blocked = false
   if (!wallet) [cta, blocked] = ['Connect an account', true]
   else if (chosen.length < 2) [cta, blocked] = ['Pick at least two coins', true]
+  else if (chosen.length > 8) [cta, blocked] = ['Pick at most eight coins', true]
   else if (!perCoin || perCoin === 0n) [cta, blocked] = ['Enter an amount', true]
   else if (missingPrice) [cta, blocked] = [`No live price for ${missingPrice.symbol}`, true]
   else if (short) [cta, blocked] = [`Not enough ${short.token.symbol}`, true]
@@ -210,7 +212,11 @@ function RangeForm({ held, balances, market }: { held: TokenInfo[]; balances: bi
     tx.run('Preparing the range', async (progress) => {
       if (!wallet || !perCoin) throw new Error('Not ready')
       const config = client.buildRange(preset, perCoin, { tokens: chosen.map((t) => t.address) })
-      progress(`Approving Aqua for ${chosen.length} coins, then shipping the range`)
+      progress(
+        solana
+          ? `Approving the Stabrix program as delegate for ${chosen.length} coins, then opening the range`
+          : `Approving Aqua for ${chosen.length} coins, then shipping the range`,
+      )
       const done = await client.ship(wallet, config, perCoin, venueOf(venue, deployment.extruction))
       return { message: `FX range live over ${chosen.length} coins. Nothing left your wallet.`, hash: done.hash }
     })
@@ -268,12 +274,14 @@ function RangeForm({ held, balances, market }: { held: TokenInfo[]; balances: bi
         </div>
       </fieldset>
 
-      <fieldset>
-        <legend className="contents">
-          <Label>Venue</Label>
-        </legend>
-        <VenuePicker value={venue} onChange={setVenue} />
-      </fieldset>
+      {!solana && (
+        <fieldset>
+          <legend className="contents">
+            <Label>Venue</Label>
+          </legend>
+          <VenuePicker value={venue} onChange={setVenue} />
+        </fieldset>
+      )}
 
       <div>
         <UsdInput id="range-usd" label="Per coin" value={text} onChange={setText} />
@@ -295,7 +303,8 @@ function RangeForm({ held, balances, market }: { held: TokenInfo[]; balances: bi
 }
 
 function BackstopForm({ held, balances, market }: { held: TokenInfo[]; balances: bigint[] | undefined; market: Market | undefined }) {
-  const { deployment, client, wallet } = useStabrix()
+  const { deployment, client, wallet, kind } = useStabrix()
+  const solana = kind === 'solana'
   const tokens = deployment.tokens
   const defaultPay = held.filter((t) => t.symbol === 'USDC' || t.symbol === 'USDT')
   const [picked, setPicked] = useState<string[] | null>(null)
@@ -338,7 +347,12 @@ function BackstopForm({ held, balances, market }: { held: TokenInfo[]; balances:
         const token = client.token(t)
         return payout.includes(token.address) ? (units(pledgeText, token, market) ?? 0n) : 0n
       })
-      progress(`Approving Aqua for ${payTokens.length} payout coin${payTokens.length > 1 ? 's' : ''}, then shipping the backstop`)
+      const payoutCoins = `${payTokens.length} payout coin${payTokens.length > 1 ? 's' : ''}`
+      progress(
+        solana
+          ? `Approving the Stabrix program as delegate for ${payoutCoins}, then opening the backstop`
+          : `Approving Aqua for ${payoutCoins}, then shipping the backstop`,
+      )
       const done = await client.shipBackstop(wallet, config, amounts, venueOf(venue, deployment.backstop))
       return { message: `Backstop standing by for ${covered.length} coins. It stays dormant until a coin is halted.`, hash: done.hash }
     })
@@ -363,7 +377,7 @@ function BackstopForm({ held, balances, market }: { held: TokenInfo[]; balances:
         </div>
         <p className="caption mt-2.5">
           {covered.length > 0
-            ? `Covers all ${tokens.length} coins. If Chainlink CRE halts one, the backstop buys it and pays in your picked coins that are still healthy.`
+            ? `Covers all ${tokens.length} coins. If ${solana ? 'the sentinel or the guardian' : 'Chainlink CRE'} halts one, the backstop buys it and pays in your picked coins that are still healthy.`
             : 'Leave at least one coin unpicked for the backstop to cover.'}
         </p>
       </fieldset>
@@ -401,12 +415,14 @@ function BackstopForm({ held, balances, market }: { held: TokenInfo[]; balances:
         <p className="caption mt-2.5">The discount grows as the cap fills. It never pays above face value.</p>
       </fieldset>
 
-      <fieldset>
-        <legend className="contents">
-          <Label>Venue</Label>
-        </legend>
-        <VenuePicker value={venue} onChange={setVenue} />
-      </fieldset>
+      {!solana && (
+        <fieldset>
+          <legend className="contents">
+            <Label>Venue</Label>
+          </legend>
+          <VenuePicker value={venue} onChange={setVenue} />
+        </fieldset>
+      )}
 
       <div className="space-y-2.5">
         <UsdInput id="pledge-usd" label="Pledge per coin" value={pledgeText} onChange={setPledgeText} />
@@ -429,7 +445,7 @@ function BackstopForm({ held, balances, market }: { held: TokenInfo[]; balances:
 }
 
 function WalletPanel({ market, balances, mine }: { market: Market | undefined; balances: bigint[] | undefined; mine: LiveStrategy[] }) {
-  const { deployment } = useStabrix()
+  const { deployment, kind } = useStabrix()
   const walletUsd = deployment.tokens.reduce((s, t, k) => s + valueUsd(balances?.[k] ?? 0n, t.decimals, priceOf(market, t)), 0)
   const prices = market?.prices
   const inRanges = prices ? mine.filter((s) => s.kind === 'range').reduce((s, x) => s + strategyUsd(x, prices), 0) : 0
@@ -461,7 +477,9 @@ function WalletPanel({ market, balances, mine }: { market: Market | undefined; b
             ))}
           </dl>
           <p className="caption mt-3">
-            Aqua lets one balance back several strategies at once. Nothing moves until a trade fills, and you can spend these coins any time.
+            {kind === 'solana'
+              ? 'The Stabrix program is a token delegate, so one balance backs several strategies at once. Nothing moves until a trade fills, and you can spend these coins any time.'
+              : 'Aqua lets one balance back several strategies at once. Nothing moves until a trade fills, and you can spend these coins any time.'}
           </p>
         </>
       )}
@@ -487,7 +505,7 @@ function StrategyCard({ s, market, onClose, busy }: { s: LiveStrategy; market: M
         </div>
         <span className="flex flex-wrap gap-1.5">
           <KindTag kind={s.kind} />
-          <VenueTag kind={s.venue.kind} />
+          <VenueTag kind={s.venue.kind} solana={!s.app.startsWith('0x')} />
         </span>
       </div>
 
@@ -527,7 +545,7 @@ function StrategyCard({ s, market, onClose, busy }: { s: LiveStrategy; market: M
 }
 
 export default function LiquidityPage() {
-  const { deployment, client, signer, wallet } = useStabrix()
+  const { deployment, client, signer, wallet, kind } = useStabrix()
   const market = useMarket()
   const balances = useBalances(signer?.address)
   const [mode, setMode] = useState<Mode>('range')
@@ -543,8 +561,11 @@ export default function LiquidityPage() {
   const dock = (s: LiveStrategy) =>
     close.run(`Closing the ${s.kind === 'range' ? 'range' : 'backstop'}`, async () => {
       if (!wallet) throw new Error('Connect an account')
-      const receipt = await client.dock(wallet, s)
-      return { message: 'Closed. Aqua no longer offers these coins.', hash: receipt.transactionHash }
+      const done = (await client.dock(wallet, s)) as { transactionHash?: string; hash?: string }
+      return {
+        message: kind === 'solana' ? 'Closed. The rent came back and the delegate approval was revoked.' : 'Closed. Aqua no longer offers these coins.',
+        hash: done.transactionHash ?? done.hash,
+      }
     })
 
   return (

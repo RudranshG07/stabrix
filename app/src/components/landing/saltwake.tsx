@@ -594,11 +594,12 @@ export function Saltwake() {
               never leaves
             </h1>
             <p className="lede">
-              One wallet balance makes FX markets on 1inch Aqua{' '}
+              One wallet balance makes FX markets on Solana and 1inch Aqua{' '}
               <br />
               and backs every stablecoin when one breaks
             </p>
             <div className="stamps">
+              <span>Solana</span>
               <span>
                 <Image src="/brand/1inch.png" alt="" width={32} height={32} />
                 1inch Aqua + SwapVM

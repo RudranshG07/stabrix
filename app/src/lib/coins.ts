@@ -7,6 +7,8 @@ export const COIN_TONES: Record<string, string> = {
   EURC: 'bg-tone-iris',
   BRZ: 'bg-tone-leaf',
   IDRX: 'bg-tone-amber',
+  PYUSD: 'bg-tone-sand',
+  USDG: 'bg-tone-amber',
 }
 
 export const COIN_HEX: Record<string, string> = {
@@ -18,6 +20,8 @@ export const COIN_HEX: Record<string, string> = {
   EURC: '#a9b8ff',
   BRZ: '#8fdc9b',
   IDRX: '#f2c27a',
+  PYUSD: '#e9d8a6',
+  USDG: '#f2c27a',
 }
 
 export const CURRENCY: Record<string, string> = {
@@ -29,4 +33,6 @@ export const CURRENCY: Record<string, string> = {
   EURC: 'EUR',
   BRZ: 'BRL',
   IDRX: 'IDR',
+  PYUSD: 'USD',
+  USDG: 'USD',
 }

@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import { TxStatus } from '@/components/tx-status'
 import { TestCoinsNotice } from '@/components/test-coins'
 import { Button, CoinDot, KindTag, Label, Panel, Pill, SectionHead, Skeleton, StatusTag, TokenSelect, VenueTag } from '@/components/ui'
+import { copyFor } from '@/lib/chain'
 import { CURRENCY } from '@/lib/coins'
 import { formatAmount, formatPct, formatRate, formatUsd, shortAddress, toUnits } from '@/lib/format'
 import { formatRatio, priceOf, units, usd, withoutMaker } from '@/lib/market'
@@ -28,7 +29,8 @@ function Field({ children }: { children: React.ReactNode }) {
 }
 
 export default function SwapPage() {
-  const { deployment, client, signer, wallet } = useStabrix()
+  const { deployment, client, signer, wallet, kind } = useStabrix()
+  const copy = copyFor(deployment.chainId)
   const market = useMarket()
   const oracle = useOracleStatus()
   const balances = useBalances(signer?.address)
@@ -50,7 +52,7 @@ export default function SwapPage() {
   const outHalted = pOut?.halted ?? false
   const me = signer?.address
   const inStatus = oracle.data?.find((o) => o.token.toLowerCase() === tIn.address.toLowerCase())
-  const haltedBy = inStatus?.creHalted ? 'Chainlink CRE' : inStatus?.guardianHalted ? 'the guardian' : 'the oracle'
+  const haltedBy = inStatus?.creHalted ? copy.haltSource : inStatus?.guardianHalted ? 'the guardian' : 'the oracle'
   const payouts = market.data
     ? tokens.filter(
         (t) =>
@@ -71,9 +73,7 @@ export default function SwapPage() {
   const stale = market.data ? tokens.filter((t) => priceOf(market.data, t)?.priceE18 == null).map((t) => t.symbol) : []
   const onlyMine = !!market.data && market.data.ranges.length > 0 && withoutMaker(market.data, me).ranges.length === 0
   const noRoute = stale.length
-    ? stale.length > 1
-      ? `The Chainlink rates for ${stale.join(', ')} are stale, so ranges with these coins pause until they update.`
-      : `The Chainlink rate for ${stale[0]} is stale, so ranges with it pause until it updates.`
+    ? copy.rateStale(stale)
     : onlyMine
       ? 'Every live range belongs to this wallet, and swaps skip your own strategies. Connect another wallet.'
       : null
@@ -105,14 +105,15 @@ export default function SwapPage() {
   else if (inHalted && (!quote || quote.legs.length === 0))
     [cta, blocked] = [payouts.length && !payouts.some((t) => t.address === tokenOut) ? `Backstops pay in ${payoutNames}` : `No backstop is buying ${tIn.symbol}`, true]
   else if (quote && quote.legs.length > 0 && quote.filled < quote.amountIn) [cta, blocked] = ['Not enough liquidity', true]
-  else if (!quote || quote.legs.length === 0) [cta, blocked] = [stale.length ? 'Chainlink rate is stale' : onlyMine ? 'No other wallet holds this pair' : 'No route', true]
+  else if (!quote || quote.legs.length === 0) [cta, blocked] = [stale.length ? `${copy.oracle} rate is stale` : onlyMine ? 'No other wallet holds this pair' : 'No route', true]
   else if (inHalted) cta = `Sell ${tIn.symbol} to the backstops`
 
   const swap = () =>
     tx.run('Routing', async (progress) => {
       if (!wallet || !quote) throw new Error('No quote')
       const n = quote.legs.length
-      progress(`Approving, then swapping across ${n} ${backstopRoute ? 'backstop' : 'range'}${n > 1 ? 's' : ''}`)
+      const across = `${n} ${backstopRoute ? 'backstop' : 'range'}${n > 1 ? 's' : ''}`
+      progress(kind === 'solana' ? `Swapping across ${across} in one transaction` : `Approving, then swapping across ${across}`)
       const done = await client.swap(wallet, quote, slippage)
       return { message: `Received ${formatAmount(done.amountOut, tOut.decimals, 4)} ${tOut.symbol}`, hash: done.hash }
     })
@@ -128,7 +129,7 @@ export default function SwapPage() {
         title="Swap"
         aside={
           <p className="max-w-2xl text-[14px] leading-snug text-muted">
-            Any pair across eight stablecoins. One quote splits across LP strategies on the 1inch router and the Stabrix router, settled in one transaction.
+            {copy.swapIntro}
           </p>
         }
       />
@@ -202,7 +203,7 @@ export default function SwapPage() {
 
           <dl className="mt-5 divide-y divide-line">
             <Row term="Rate">{rate ? `1 ${tIn.symbol} = ${formatRatio(rate)} ${tOut.symbol}` : '-'}</Row>
-            <Row term="Value vs Chainlink" tone={value !== null && value < -1 ? 'down' : undefined}>
+            <Row term={`Value vs ${copy.oracle}`} tone={value !== null && value < -1 ? 'down' : undefined}>
               {value === null ? '-' : formatPct(value, 3)}
             </Row>
             <Row term="Minimum received">{quote ? `${formatAmount(minOut, tOut.decimals, 4)} ${tOut.symbol}` : '-'}</Row>
@@ -265,7 +266,7 @@ export default function SwapPage() {
                         <span className="text-[12px] font-medium tracking-[0.04em]">{s ? shortAddress(s.maker) : '-'}</span>
                         <span className="flex gap-1.5">
                           {s && <KindTag kind={s.kind} />}
-                          {s && <VenueTag kind={s.venue.kind} />}
+                          {s && <VenueTag kind={s.venue.kind} solana={!s.app.startsWith('0x')} />}
                         </span>
                       </div>
                       <div className="mt-3 flex items-baseline justify-between">
@@ -287,8 +288,8 @@ export default function SwapPage() {
 
           <Panel className="p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3">
-              <Label>Chainlink prices</Label>
-              <span className="text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase">guarded by CRE</span>
+              <Label>{copy.oracle} prices</Label>
+              <span className="text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase">{kind === 'solana' ? 'checked by the sentinel' : 'guarded by CRE'}</span>
             </div>
             <ul className="mt-3 divide-y divide-line">
               {tokens.map((t) => {
@@ -316,7 +317,7 @@ export default function SwapPage() {
                 )
               })}
             </ul>
-            <p className="caption mt-3">Pegged coins count at $1 unless CRE halts them. FX coins use live Chainlink rates. Tap a coin to receive it.</p>
+            <p className="caption mt-3">{copy.pricesNote}</p>
           </Panel>
         </div>
       </div>

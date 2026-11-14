@@ -8,6 +8,7 @@ import {
   stabrixOracleAbi,
   stabrixRouterAbi,
 } from '@stabrix/sdk'
+import type { SolanaStabrixClient } from '@stabrix/sdk/solana'
 import { type Address, type Hex, type PublicClient, parseEventLogs } from 'viem'
 
 export type StrategyKind = 'range' | 'backstop' | 'other'
@@ -46,8 +47,9 @@ export interface ActivityData {
 
 export const activityGroup = (a: Activity) => (a.type === 'swap' ? 'swaps' : a.type === 'ship' || a.type === 'dock' ? 'liquidity' : 'oracle')
 
-const WINDOW = 50_000n
-const CHUNK = 5_000n
+const WINDOW = 1_500_000n
+const CHUNK = 50_000n
+const PARALLEL = 6
 const LIMIT = 60
 const FILL_LIMIT = 300
 
@@ -65,10 +67,13 @@ function kindOf(strategy: Hex): StrategyKind {
 export async function fetchActivity(client: PublicClient, d: Deployment): Promise<ActivityData> {
   const latest = await client.getBlockNumber()
   const start = latest > d.fromBlock + WINDOW ? latest - WINDOW : d.fromBlock
+  const ranges: [bigint, bigint][] = []
+  for (let from = start; from <= latest; from += CHUNK) ranges.push([from, from + CHUNK - 1n < latest ? from + CHUNK - 1n : latest])
+  const address = [d.batchTaker, d.oracle, d.aqua, d.router, d.officialRouter]
   const logs = []
-  for (let from = start; from <= latest; from += CHUNK) {
-    const to = from + CHUNK - 1n < latest ? from + CHUNK - 1n : latest
-    logs.push(...(await client.getLogs({ address: [d.batchTaker, d.oracle, d.aqua, d.router, d.officialRouter], fromBlock: from, toBlock: to })))
+  for (let k = 0; k < ranges.length; k += PARALLEL) {
+    const batch = await Promise.all(ranges.slice(k, k + PARALLEL).map(([fromBlock, toBlock]) => client.getLogs({ address, fromBlock, toBlock })))
+    for (const part of batch) logs.push(...part)
   }
 
   const apps = new Set([d.router.toLowerCase(), d.officialRouter.toLowerCase()])
@@ -117,5 +122,45 @@ export async function fetchActivity(client: PublicClient, d: Deployment): Promis
   return {
     events: recent.map((a) => ({ ...a, time: at.get(a.block) ?? null })),
     fills: lastFills.map((f) => ({ ...f, time: at.get(f.block) ?? null })),
+  }
+}
+
+export async function fetchSolanaActivity(client: SolanaStabrixClient): Promise<ActivityData> {
+  const rows = await client.activity(40)
+  const kinds = new Map<string, StrategyKind>()
+  for (const r of rows) if (r.event.kind === 'open') kinds.set(r.event.strategy.toBase58(), r.event.strategyKind)
+  const app = client.program.toBase58() as Address
+  const addr = (k: { toBase58(): string }) => k.toBase58() as Address
+  const out: Activity[] = []
+  const fills: Fill[] = []
+  const swaps = new Map<string, Activity & { type: 'swap' }>()
+  for (const r of rows) {
+    const base = { id: `${r.signature}:${r.index}`, block: BigInt(r.slot), logIndex: r.index, hash: r.signature as Hex, time: r.time }
+    const e = r.event
+    if (e.kind === 'swap') {
+      fills.push({ hash: base.hash, block: base.block, time: r.time, orderHash: e.strategy.toBase58() as Hex, tokenIn: addr(e.mintIn), tokenOut: addr(e.mintOut), amountIn: e.amountIn, amountOut: e.amountOut })
+      const prev = swaps.get(r.signature)
+      if (prev) {
+        prev.amountIn += e.amountIn
+        prev.amountOut += e.amountOut
+        prev.legs += 1n
+      } else {
+        const a = { ...base, type: 'swap' as const, sender: addr(e.taker), tokenIn: addr(e.mintIn), tokenOut: addr(e.mintOut), amountIn: e.amountIn, amountOut: e.amountOut, legs: 1n }
+        swaps.set(r.signature, a)
+        out.push(a)
+      }
+    } else if (e.kind === 'open') {
+      out.push({ ...base, type: 'ship', maker: addr(e.maker), app, strategy: e.strategyKind })
+    } else if (e.kind === 'close') {
+      out.push({ ...base, type: 'dock', maker: addr(e.maker), app, strategy: kinds.get(e.strategy.toBase58()) ?? 'other' })
+    } else if (e.kind === 'report') {
+      out.push({ ...base, type: 'cre', token: addr(e.mint), halted: e.halted, priceE18: e.priceE9 * 1_000_000_000n })
+    } else {
+      out.push({ ...base, type: 'guardian', token: addr(e.mint), halted: e.halted })
+    }
+  }
+  return {
+    events: out.sort((a, b) => Number(b.block - a.block) || b.logIndex - a.logIndex).slice(0, LIMIT),
+    fills: fills.sort((a, b) => Number(b.block - a.block)).slice(0, FILL_LIMIT),
   }
 }

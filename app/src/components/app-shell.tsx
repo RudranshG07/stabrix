@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { ChevronDown } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { RequireDeployment, useMaybeStabrix, useNetwork, useOracleStatus, useStabrix } from '@/lib/stabrix'
 import { DEV_ACCOUNTS, NETWORK_LABELS } from '@/lib/config'
@@ -44,6 +45,25 @@ function NetworkPill() {
 function NetworkSwitch({ className = '' }: { className?: string }) {
   const { current, available, select } = useNetwork()
   if (available.length < 2) return null
+  if (available.length > 2) {
+    return (
+      <label className={`${className} relative min-h-9 shrink-0 items-center rounded-lg border border-line bg-surface text-[12.5px]`}>
+        <span className="sr-only">Network</span>
+        <select
+          value={current ?? ''}
+          onChange={(e) => select(e.target.value)}
+          className="h-9 cursor-pointer appearance-none rounded-lg bg-transparent pr-8 pl-3 outline-none"
+        >
+          {available.map((n) => (
+            <option key={n} value={n}>
+              {NETWORK_LABELS[n] ?? n}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-2.5 size-3.5 text-muted" aria-hidden />
+      </label>
+    )
+  }
   return (
     <div role="radiogroup" aria-label="Network" className={`${className} min-h-9 shrink-0 items-center rounded-lg border border-line bg-surface p-0.5 text-[12.5px]`}>
       {available.map((n) => {
@@ -85,6 +105,31 @@ function Nav({ path, className }: { path: string; className: string }) {
   )
 }
 
+function PartnerMarks({ solana }: { solana: boolean }) {
+  if (solana) {
+    return (
+      <>
+        <span>Solana program</span>
+        <span>Pyth prices</span>
+        <span>SPL Token + Token-2022</span>
+      </>
+    )
+  }
+  return (
+    <>
+      <span className="flex items-center gap-1.5">
+        <Image src="/brand/1inch.png" alt="" width={32} height={32} className="size-4 rounded-full" />
+        1inch Aqua + SwapVM
+      </span>
+      <span className="flex items-center gap-1.5">
+        <Image src="/brand/chainlink.png" alt="" width={32} height={32} className="size-4 rounded-full" />
+        Chainlink CRE
+      </span>
+      <span>Base</span>
+    </>
+  )
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname()
   const ctx = useMaybeStabrix()
@@ -117,15 +162,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 font-mono text-[10.5px] tracking-[0.06em] uppercase sm:px-6">
           <span>Stabrix · liquidity that never leaves</span>
           <span className="flex flex-wrap items-center gap-x-4 gap-y-2 text-muted">
-            <span className="flex items-center gap-1.5">
-              <Image src="/brand/1inch.png" alt="" width={32} height={32} className="size-4 rounded-full" />
-              1inch Aqua + SwapVM
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Image src="/brand/chainlink.png" alt="" width={32} height={32} className="size-4 rounded-full" />
-              Chainlink CRE
-            </span>
-            <span>Base</span>
+            <PartnerMarks solana={ctx?.kind === 'solana'} />
           </span>
         </div>
       </footer>

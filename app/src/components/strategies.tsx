@@ -65,7 +65,7 @@ export function StrategyTable({ market, loading, owner }: { market: Market | und
                   <KindTag kind={s.kind} />
                 </td>
                 <td className="px-5 py-3">
-                  <VenueTag kind={s.venue.kind} />
+                  <VenueTag kind={s.venue.kind} solana={!s.app.startsWith('0x')} />
                 </td>
                 <td className="num px-5 py-3 text-[14px]">{settingOf(s)}</td>
                 <td className="num px-5 py-3 text-[14px]">{formatUsd(strategyUsd(s, market.prices), 0)}</td>

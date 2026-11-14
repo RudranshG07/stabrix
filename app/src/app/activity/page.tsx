@@ -5,6 +5,7 @@ import { useState } from 'react'
 import type { Hex } from 'viem'
 import { CoinDot, Label, Panel, Pill, SectionHead, Skeleton, Tag } from '@/components/ui'
 import { type Activity, activityGroup } from '@/lib/activity'
+import { explorerFor } from '@/lib/chain'
 import { DEV_ACCOUNTS } from '@/lib/config'
 import { formatAmount, formatRate, shortAddress } from '@/lib/format'
 import { useActivity, useStabrix } from '@/lib/stabrix'
@@ -18,7 +19,6 @@ const FILTERS: [Filter, string][] = [
   ['oracle', 'Oracle'],
 ]
 
-const EXPLORERS: Record<number, string> = { 8453: 'https://basescan.org', 84532: 'https://sepolia.basescan.org' }
 
 type Report = Extract<Activity, { type: 'cre' }>
 type Row = { key: string; hash: Hex; time: number | null; group: Exclude<Filter, 'all'> } & ({ a: Activity } | { reports: Report[] })
@@ -34,23 +34,24 @@ function ago(t: number | null): string {
   return `${Math.floor(s / 86_400)} d ago`
 }
 
-function TagFor({ a }: { a: Activity }) {
+function TagFor({ a, oracle }: { a: Activity; oracle: string }) {
   if (a.type === 'swap') return <Tag dot="var(--color-violet)">Swap</Tag>
-  if (a.type === 'cre') return <Tag dot={a.halted ? 'var(--color-down)' : 'var(--color-up)'}>Chainlink CRE</Tag>
+  if (a.type === 'cre') return <Tag dot={a.halted ? 'var(--color-down)' : 'var(--color-up)'}>{oracle}</Tag>
   if (a.type === 'guardian') return <Tag dot={a.halted ? 'var(--color-down)' : 'var(--color-up)'}>Guardian</Tag>
   return <Tag dot={a.strategy === 'backstop' ? '#f6c945' : 'var(--color-ink)'}>{a.strategy === 'backstop' ? 'Backstop' : 'FX range'}</Tag>
 }
 
 export default function ActivityPage() {
-  const { deployment } = useStabrix()
+  const { deployment, kind } = useStabrix()
   const activity = useActivity()
   const [filter, setFilter] = useState<Filter>('all')
-  const explorer = DEV_ACCOUNTS ? undefined : EXPLORERS[deployment.chainId]
+  const explorer = DEV_ACCOUNTS ? undefined : explorerFor(deployment.chainId)
+  const oracle = kind === 'solana' ? 'Sentinel' : 'Chainlink CRE'
   const token = (a: string) => deployment.tokens.find((t) => t.address.toLowerCase() === a.toLowerCase())
 
   const Addr = ({ address }: { address: string }) =>
     explorer ? (
-      <a href={`${explorer}/address/${address}`} target="_blank" rel="noreferrer" className={link}>
+      <a href={explorer.address(address)} target="_blank" rel="noreferrer" className={link}>
         {shortAddress(address)}
       </a>
     ) : (
@@ -115,7 +116,8 @@ export default function ActivityPage() {
       return <>{`${a.halted ? 'Halted' : 'Resumed'} ${t?.symbol ?? shortAddress(a.token)} by hand`}</>
     }
     const what = a.strategy === 'backstop' ? 'Backstop' : a.strategy === 'range' ? 'FX range' : 'Strategy'
-    const venue = a.app.toLowerCase() === deployment.officialRouter.toLowerCase() ? '1inch router' : 'Stabrix router'
+    const venue =
+      kind === 'solana' ? 'Solana program' : a.app.toLowerCase() === deployment.officialRouter.toLowerCase() ? '1inch router' : 'Stabrix router'
     return (
       <>
         {what} {a.type === 'ship' ? (a.strategy === 'backstop' ? 'pledged' : 'opened') : 'closed'} by <Addr address={a.maker} />
@@ -149,7 +151,7 @@ export default function ActivityPage() {
         title="Activity"
         aside={
           <p className="max-w-2xl text-[14px] leading-snug text-muted">
-            Every swap, every strategy opened or closed, and every Chainlink CRE report, read straight from the chain.
+            Every swap, every strategy opened or closed, and every {kind === 'solana' ? 'sentinel' : 'Chainlink CRE'} report, read straight from the chain.
           </p>
         }
       />
@@ -187,9 +189,9 @@ export default function ActivityPage() {
               <li key={row.key} className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1 py-3 sm:grid-cols-[150px_1fr_auto_auto]">
                 <span>
                   {'a' in row ? (
-                    <TagFor a={row.a} />
+                    <TagFor a={row.a} oracle={oracle} />
                   ) : (
-                    <Tag dot={row.reports.some((r) => r.halted) ? 'var(--color-down)' : 'var(--color-up)'}>Chainlink CRE</Tag>
+                    <Tag dot={row.reports.some((r) => r.halted) ? 'var(--color-down)' : 'var(--color-up)'}>{oracle}</Tag>
                   )}
                 </span>
                 <span className="min-w-0 text-[13.5px] leading-snug">{'a' in row ? describe(row.a) : describeReport(row.reports)}</span>
@@ -197,7 +199,7 @@ export default function ActivityPage() {
                 <span className="col-start-2 sm:col-start-auto">
                   {explorer ? (
                     <a
-                      href={`${explorer}/tx/${row.hash}`}
+                      href={explorer.tx(row.hash)}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-0.5 font-mono text-[12px] underline decoration-line underline-offset-2 hover:decoration-ink"

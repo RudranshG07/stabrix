@@ -81,7 +81,7 @@ export function OrbitMap({ ranges, coins }: { ranges: LiveRange[]; coins: Coin[]
         })}
         <circle cx={C} cy={C} r={2.5} style={{ fill: 'var(--color-ink)' }} />
       </svg>
-      <figcaption className="caption mt-3 text-center">rings = range edges · dot = reserve mix · center = every coin at its Chainlink price</figcaption>
+      <figcaption className="caption mt-3 text-center">rings = range edges · dot = reserve mix · center = every coin at its oracle price</figcaption>
     </figure>
   )
 }

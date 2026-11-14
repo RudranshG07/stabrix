@@ -3,24 +3,23 @@
 import { ArrowUpRight, ChevronDown, Loader2, Wallet } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { privateKeyToAccount } from 'viem/accounts'
-import { SEPOLIA_FAUCET, useTestCoins } from '@/components/test-coins'
+import { useTestCoins } from '@/components/test-coins'
 import { shortAddress } from '@/lib/format'
-import { ANVIL_ACCOUNTS, DEV_ACCOUNTS, useStabrix } from '@/lib/stabrix'
-import type { WalletOption } from '@/lib/wallets'
+import { explorerFor } from '@/lib/chain'
+import { ANVIL_ACCOUNTS, DEV_ACCOUNTS, type WalletChoice, useStabrix } from '@/lib/stabrix'
 
-const EXPLORERS: Record<number, string> = { 8453: 'https://basescan.org/address/', 84532: 'https://sepolia.basescan.org/address/' }
 const item = 'flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-sm transition-colors hover:bg-surface-hover disabled:opacity-60'
 const heading = 'px-2.5 pt-1.5 pb-1 text-[10px] font-medium tracking-[0.08em] text-muted uppercase'
 
-function WalletIcon({ option }: { option: WalletOption }) {
+function WalletIcon({ option }: { option: WalletChoice }) {
   if (!option.icon) return <Wallet className="size-5 shrink-0 text-muted" aria-hidden />
   return <img src={option.icon} alt="" width={20} height={20} className="size-5 shrink-0 rounded-md" />
 }
 
 export function AccountMenu() {
-  const { signer, setSigner, wallets, connectInjected, disconnect, deployment } = useStabrix()
+  const { signer, setSigner, wallets, connectInjected, disconnect, deployment, kind } = useStabrix()
   const coins = useTestCoins()
-  const explorer = DEV_ACCOUNTS ? undefined : EXPLORERS[deployment.chainId]
+  const explorer = DEV_ACCOUNTS ? undefined : explorerFor(deployment.chainId)
   const [open, setOpen] = useState(false)
   const [connecting, setConnecting] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +37,7 @@ export function AccountMenu() {
     }
   }, [open])
 
-  const connect = async (option: WalletOption) => {
+  const connect = async (option: WalletChoice) => {
     setError(null)
     setConnecting(option.id)
     try {
@@ -51,7 +50,7 @@ export function AccountMenu() {
     }
   }
 
-  const injected = signer?.kind === 'injected' ? signer : null
+  const injected = signer?.kind === 'injected' || signer?.kind === 'solana' ? signer : null
 
   return (
     <div ref={root} className="relative">
@@ -105,10 +104,10 @@ export function AccountMenu() {
             <div className="p-2">
               <p className={heading}>Connected with {injected.label}</p>
               {explorer ? (
-                <a href={`${explorer}${injected.address}`} target="_blank" rel="noreferrer" role="menuitem" className={`${item} justify-between`}>
+                <a href={explorer.address(injected.address)} target="_blank" rel="noreferrer" role="menuitem" className={`${item} justify-between`}>
                   <span className="font-mono text-xs">{shortAddress(injected.address)}</span>
                   <span className="flex items-center gap-1 text-xs text-muted">
-                    Basescan <ArrowUpRight className="size-3.5" aria-hidden />
+                    {explorer.name} <ArrowUpRight className="size-3.5" aria-hidden />
                   </span>
                 </a>
               ) : (
@@ -118,10 +117,10 @@ export function AccountMenu() {
                 <>
                   <button type="button" role="menuitem" onClick={coins.mint} disabled={coins.busy} className={`${item} flex-col items-start gap-0`}>
                     <span>{coins.busy ? 'Minting test coins...' : 'Get test coins'}</span>
-                    <span className="text-xs text-muted">$10,000 of each of the 8 coins, one transaction</span>
+                    <span className="text-xs text-muted">$10,000 of each of the 8 coins{kind === 'solana' ? '' : ', one transaction'}</span>
                   </button>
-                  <a href={SEPOLIA_FAUCET} target="_blank" rel="noreferrer" role="menuitem" className={`${item} justify-between`}>
-                    Get Base Sepolia ETH
+                  <a href={coins.faucetUrl} target="_blank" rel="noreferrer" role="menuitem" className={`${item} justify-between`}>
+                    {coins.faucetLabel}
                     <ArrowUpRight className="size-3.5 text-muted" aria-hidden />
                   </a>
                 </>
@@ -152,8 +151,13 @@ export function AccountMenu() {
               {wallets.length === 0 && (
                 <div className="px-2.5 py-2 text-sm">
                   <p className="text-muted">No browser wallet found.</p>
-                  <a href="https://metamask.io/download/" target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 underline decoration-line underline-offset-2 hover:decoration-ink">
-                    Install MetaMask <ArrowUpRight className="size-3.5" aria-hidden />
+                  <a
+                    href={kind === 'solana' ? 'https://phantom.com/download' : 'https://metamask.io/download/'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 inline-flex items-center gap-1 underline decoration-line underline-offset-2 hover:decoration-ink"
+                  >
+                    {kind === 'solana' ? 'Install Phantom' : 'Install MetaMask'} <ArrowUpRight className="size-3.5" aria-hidden />
                   </a>
                 </div>
               )}

@@ -22,8 +22,7 @@ import {
   useChainlinkPrices,
   useMarket,
   useOracleStatus,
-  useStabrix,
-} from '@/lib/stabrix'
+  useStabrix, type Wallet } from '@/lib/stabrix'
 import { type LiveStrategy, strategyUsd, valueUsd } from '@/lib/strategy'
 import { useTx } from '@/lib/tx'
 
@@ -68,7 +67,10 @@ function labelOf(s: LiveStrategy) {
 }
 
 export default function LabPage() {
-  const { deployment, client, publicClient, chain, wallet, signer } = useStabrix()
+  const ctx = useStabrix()
+  const { deployment, client, chain, signer } = ctx
+  const publicClient = ctx.publicClient!
+  const wallet = ctx.wallet as Wallet | null
   const market = useMarket()
   const oracle = useOracleStatus()
   const feeds = useChainlinkPrices()
