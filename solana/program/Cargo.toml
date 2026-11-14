@@ -1,0 +1,18 @@
+[package]
+name = "stabrix"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+devnet = []
+
+[dependencies]
+pinocchio = "=0.9.3"
+pinocchio-system = "=0.3.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
