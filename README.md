@@ -1,10 +1,71 @@
 # Stabrix
 
-**Liquidity that never leaves.** Stablecoin FX markets and depeg backstops built on **1inch Aqua** and **1inch SwapVM**. One wallet balance makes markets across 8 stablecoins and stands behind every coin when one breaks, priced and guarded by Chainlink CRE.
+**Liquidity that never leaves.** Stablecoin FX markets and depeg backstops on **Solana** and on **1inch Aqua** and **1inch SwapVM**. One wallet balance makes markets across 8 stablecoins and stands behind every coin when one breaks.
+
+Solana program in Rust (Pinocchio) · live on [Solana devnet](#solana-devnet) · 600 Rust to TypeScript parity vectors, 21 end-to-end checks on a local validator
 
 Built on 1inch Aqua · 2 new 1inch SwapVM instructions · runs on 1inch's official AquaSwapVMRouter · Chainlink CRE workflow in Go · live on [Base Sepolia](#base-sepolia-84532) · 80 contract tests, 145 SDK tests, 21 workflow tests
 
 ![Landing](docs/screenshots/landing.png)
+
+## Solana
+
+The same two jobs, one balance, now as a native Solana program. Coins stay in the LP's own token accounts: opening a strategy approves the Stabrix program as an SPL delegate, the Solana version of an Aqua allowance. Nothing moves until a trade fills, and then the program pays the taker straight from the LP's wallet and takes the taker's coin straight into it.
+
+| | EVM (1inch Aqua) | Solana |
+|---|---|---|
+| Where coins sit | LP wallet, Aqua allowance | LP token accounts, SPL delegate to a per-LP program address |
+| FX range | SwapVM opcode 34 | `swap` on a range account, same sphere curve |
+| Peg backstop | SwapVM opcode 35 | `swap` on a backstop account, same discount curve |
+| Prices | Chainlink feeds plus CRE reports | Pyth price accounts plus sentinel reports, same deviation guard |
+| Depeg guard | Chainlink CRE workflow (Go) | `ops/src/solana/sentinel.ts`, a port of the CRE policy: halt at 300 bps, soft 75, resume 25, strict API rule |
+| Routing | `StabrixBatchTaker` | one transaction with one `swap` instruction per leg |
+| Coins | USDC, USDT, DAI, USDS, USDe, EURC, BRZ, IDRX | USDC, USDT, PYUSD, USDG, USDS, USDe, EURC, BRZ (PYUSD and USDG are Token-2022) |
+
+The program is about 80 KB, written with Pinocchio instead of Anchor to keep the rent low. The math is the EVM math in `u128` with prices in 1e9, and for the same onchain state the SDK quotes exactly what the program pays: 600 generated cases (ranges with up to 8 coins and 4, 6 and 9 decimals, and backstops) give the same output or the same error in Rust and in the TypeScript SDK.
+
+Onchain safety:
+- A swap pays from the maker's token account only when its delegate is the maker's program address, and only up to the delegated amount.
+- The amount the maker actually received is measured after the transfer in, so a Token-2022 transfer fee can never be priced as income.
+- Ranges refuse a halted coin. Backstops buy only halted coins, pay only healthy ones, and never above face value.
+- Every Pyth account is checked for owner, account type and full Wormhole verification. A configured feed must be passed in, so a taker cannot hide a lower depeg price.
+- Only the maker can close a strategy. Closing returns its rent, and the SDK revokes the delegate once no strategy uses that coin.
+- The oracle admin is the program's upgrade authority. Only the reporter key can post prices, and reports more than 300 s in the future are refused.
+
+### Solana devnet
+
+Program `9yndJ2CVGSWr58nXNVS8rgkYFiiXghkchicSK5KjhABw`, oracle `A6DuBEhUJYfhe2V3nPSkjoxJCZw8j2Q8aTbo98WDbdpm`. Test coins (anyone can mint them from the app with "Get test coins"), mints in `deployments/solana-devnet.json`. Seeded with Tight $1,000,000, Balanced $200,000 and Wide $100,000 per coin, plus a backstop pledging $200,000 each of USDC and USDT.
+
+A live devnet swap from a fresh wallet through the app: 1,000 USDC for 907.279044 EURC, [`2mAweA3t...m9GB`](https://solscan.io/tx/2mAweA3tio38LwXKsPKLN4E73KC8EBPWc6L2BCqtHFsvxYvrSsrR3em3qMLAwiomXWBpzZBfGbBueFvyjtqnm9GB?cluster=devnet).
+
+### Solana mainnet cost
+
+Measured with `solana rent` against mainnet:
+
+| Item | SOL |
+|---|---|
+| Program data, 82,600 byte program | 0.4205 (rent, refunded if the program is closed) |
+| Program account | 0.0008 |
+| Oracle account | 0.0076 |
+| About 90 upload transactions plus setup | 0.0005 |
+| **Total** | **about 0.43 SOL** |
+
+Each strategy an LP opens costs 0.0027 SOL of rent, refunded on close, plus 0.0015 SOL for any token account the wallet does not have yet. A swap costs the normal 0.000005 SOL fee and uses about 50,000 compute units per leg.
+
+### Solana commands
+
+```bash
+cd solana && cargo test --manifest-path program/Cargo.toml
+cargo-build-sbf --manifest-path program/Cargo.toml --features devnet   # devnet build with the test coin faucet
+cargo-build-sbf --manifest-path program/Cargo.toml                     # mainnet build
+cd ops
+npm run solana:e2e                                          # against solana-test-validator on 8899
+npx tsx src/solana/upload.ts --cluster=devnet               # throttled, resumable program upload
+npm run solana:setup -- --cluster=devnet                    # coins, oracle, deployments/solana-devnet.json
+npm run solana:sentinel -- --cluster=devnet                 # one price report; add --loop=60 to keep running
+npm run solana:sentinel -- --cluster=devnet --override=USDe=0.93   # depeg demo, devnet only
+npm run solana:seed -- --cluster=devnet
+```
 
 ## The problem
 
@@ -387,6 +448,12 @@ stabrix/
 │   ├── src/math.ts                   bigint port of StabrixMath
 │   ├── src/split.ts                  64-slice router across every strategy
 │   └── src/client.ts                 market snapshot, quotes, ship, dock
+├── solana/program/            Solana program, Rust with Pinocchio
+│   ├── src/math.rs                   the sphere AMM and backstop discount in u128
+│   ├── src/price.rs                  Pyth reads, report freshness, deviation guard
+│   └── src/lib.rs                    oracle, open, close, swap, faucet (devnet only)
+├── sdk/src/solana/            Solana client with the same surface as the EVM client
+├── ops/src/solana/            upload, setup, seed, sentinel, end-to-end checks
 ├── ops/                       deploy, seed, cost table, live trades, depeg demos
 ├── app/                       Next.js app
 ├── deployments/               addresses per network
@@ -453,7 +520,7 @@ cd ../cre && cre workflow simulate depeg-sentinel -T testnet-settings --broadcas
 
 ### Hosting
 
-The app runs on Vercel's free tier: import the repo, set Root Directory to `app`, and set `DEPLOYMENT_NAME=84532,8453`. One site serves both networks with a network switch in the header; the first network listed is the default. Never set `NEXT_PUBLIC_DEV_ACCOUNTS` on a hosted build.
+The app runs on Vercel's free tier: import the repo, set Root Directory to `app`, and set `DEPLOYMENT_NAME=solana-devnet,84532,8453` (add `solana-mainnet` first once it is deployed). One site serves every network with a network switch in the header; the first network listed is the default. Solana wallets connect through the Wallet Standard (Phantom, Solflare, Backpack). The public Solana RPCs rate-limit browsers, so set `NEXT_PUBLIC_RPC_URL_103` (devnet) and `NEXT_PUBLIC_RPC_URL_101` (mainnet) to a free provider key if you can. Never set `NEXT_PUBLIC_DEV_ACCOUNTS` on a hosted build.
 
 ## References
 
