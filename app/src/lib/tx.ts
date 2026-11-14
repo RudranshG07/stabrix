@@ -11,12 +11,17 @@ export type TxState =
   | { status: 'error'; message: string }
 
 const FRIENDLY: Record<string, string> = {
-  Halted: 'Chainlink CRE has halted this coin. Ranges refuse it; only backstops buy it now.',
+  Halted: 'This coin is halted by the oracle. Ranges refuse it; only backstops buy it now.',
   NotDepegged: 'This coin is healthy, so backstops are not buying it.',
   PayoutHalted: 'A backstop never pays out in a halted coin. Pick a healthy coin to receive.',
   BackstopFull: 'The backstops are full for this coin. Try a smaller amount.',
   ExactInOnly: 'Backstops only take exact-input trades.',
-  StaleRate: 'A Chainlink rate is stale, so FX swaps pause until it updates.',
+  StaleRate: 'An FX rate is stale, so FX swaps pause until it updates.',
+  MissingFeed: 'A price feed account was missing from the trade. Quote again.',
+  Slippage: 'Price moved beyond your slippage limit. Quote again.',
+  Unauthorized: 'Only the wallet that opened this strategy can close it.',
+  UnknownCoin: 'This coin is not listed on the Stabrix oracle.',
+  ZeroAmount: 'The amount is too small to trade.',
   InsufficientLiquidity: 'A provider spent from their wallet. Quote again to route around them.',
   RangeEdge: 'Every range reached its edge for this trade. Try a smaller amount.',
   ExposureCap: 'The trade would exceed an LP exposure cap.',
@@ -28,6 +33,13 @@ const FRIENDLY: Record<string, string> = {
 }
 
 export function explain(e: unknown): string {
+  if (e instanceof Error && e.name === 'SolanaError') {
+    const name = e.message.trim()
+    if (FRIENDLY[name]) return FRIENDLY[name]
+    if (/reject|denied|cancel/i.test(name)) return 'Request rejected in wallet.'
+    return name.length > 220 ? `${name.slice(0, 220)}…` : name
+  }
+  if (e instanceof Error && /User rejected|rejected the request|denied/i.test(e.message)) return 'Request rejected in wallet.'
   if (e instanceof BaseError) {
     const revert = e.walk((x) => x instanceof ContractFunctionRevertedError)
     if (revert instanceof ContractFunctionRevertedError) {
