@@ -15,9 +15,15 @@
     "sync-feeds": "tsx src/sync-feeds.ts",
     "costs": "tsx src/costs.ts",
     "trade:testnet": "tsx src/trade-testnet.ts",
-    "depeg:testnet": "tsx src/depeg-testnet.ts"
+    "depeg:testnet": "tsx src/depeg-testnet.ts",
+    "solana:setup": "tsx src/solana/setup.ts",
+    "solana:seed": "tsx src/solana/seed.ts",
+    "solana:sentinel": "tsx src/solana/sentinel.ts",
+    "solana:e2e": "tsx src/solana/e2e.ts"
   },
   "dependencies": {
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
     "@stabrix/sdk": "0.1.0",
     "viem": "^2.57.16"
   },
