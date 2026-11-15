@@ -1,12 +1,10 @@
-import { type SolanaDeployment, TOKEN_2022_PROGRAM, TOKEN_PROGRAM, decodeOracle, ix, pda } from '@stabrix/sdk/solana'
+import { ORACLE_LEN, type SolanaDeployment, TOKEN_2022_PROGRAM, TOKEN_PROGRAM, decodeOracle, ix, pda } from '@stabrix/sdk/solana'
 import { createInitializeMint2Instruction, getMintLen } from '@solana/spl-token'
 import { Keypair, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from '@solana/web3.js'
 import {
   CLUSTERS,
   COINS,
-  MARKET_MAX_AGE,
   MAX_DEVIATION_BPS,
-  REF_MAX_AGE,
   reportMaxAge,
   cluster,
   connect,
@@ -60,7 +58,8 @@ const oracle = pda.oracle(program)
 const maxAge = reportMaxAge(c)
 const current = await conn.getAccountInfo(oracle)
 if (!current) {
-  await sendAndConfirmTransaction(conn, new Transaction().add(ix.initOracle(program, admin.publicKey, reporter, maxAge, MAX_DEVIATION_BPS)), [admin])
+  const rent = await conn.getMinimumBalanceForRentExemption(ORACLE_LEN)
+  await sendAndConfirmTransaction(conn, new Transaction().add(ix.initOracle(program, admin.publicKey, reporter, maxAge, MAX_DEVIATION_BPS, rent)), [admin])
   console.log(`oracle ${oracle.toBase58()}`)
 } else {
   const s = decodeOracle(current.data)
@@ -73,13 +72,7 @@ if (!current) {
 const tx = new Transaction()
 for (const coin of COINS) {
   tx.add(
-    ix.setCoin(program, admin.publicKey, mints.get(coin.symbol)!, {
-      fx: coin.fx,
-      refFeed: !mock && coin.refFeed ? new PublicKey(coin.refFeed) : undefined,
-      refMaxAge: REF_MAX_AGE,
-      marketFeed: !mock && coin.marketFeed ? new PublicKey(coin.marketFeed) : undefined,
-      marketMaxAge: MARKET_MAX_AGE,
-    }),
+    ix.setCoin(program, admin.publicKey, mints.get(coin.symbol)!, { fx: coin.fx }),
   )
 }
 await sendAndConfirmTransaction(conn, tx, [admin])
@@ -103,8 +96,8 @@ const deployment: SolanaDeployment = {
       decimals: coin.decimals,
       tokenProgram: e.tokenProgram.toBase58(),
       fx: coin.fx,
-      feed: e.refFeed.toBase58() as `0x${string}`,
-      marketFeed: e.marketFeed.toBase58() as `0x${string}`,
+      feed: (!mock && coin.refFeed ? coin.refFeed : '') as `0x${string}`,
+      marketFeed: (!mock && coin.marketFeed ? coin.marketFeed : '') as `0x${string}`,
     }
   }),
 }

@@ -161,7 +161,6 @@ export const COINS: CoinSpec[] = [
 
 export const reportMaxAge = (c: Cluster) => (c === 'mainnet' ? 900 : 30 * 86_400)
 export const MAX_DEVIATION_BPS = 50
-export const REF_MAX_AGE = 4500
 export const MARKET_MAX_AGE = 3600
 
 export async function lamportsLeft(conn: Connection, kp: Keypair) {

@@ -35,6 +35,8 @@ console.log(`${c}: ${so.length} bytes into buffer ${buffer.publicKey.toBase58()}
 
 const existing = await retry(() => conn.getAccountInfo(buffer.publicKey))
 if (!existing) {
+  const need = (await retry(() => conn.getMinimumBalanceForRentExemption(HEADER + so.length))) / 1e9 + 0.002
+  if (before < need) throw new Error(`payer has ${before} SOL but the upload needs about ${need.toFixed(4)} SOL; nothing was sent`)
   const space = HEADER + so.length
   const lamports = await retry(() => conn.getMinimumBalanceForRentExemption(space))
   const init = new TransactionInstruction({
