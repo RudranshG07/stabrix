@@ -30,14 +30,12 @@ import {
   type StrategyAccount,
   TOKEN_2022_PROGRAM,
   TOKEN_PROGRAM,
-  ZERO_KEY,
   decodeOracle,
   decodeStrategy,
   ix,
   parseEvents,
   pda,
   programErrorName,
-  readPyth,
 } from './layout.js'
 import { E9, solBackstopOut, solRate } from './math.js'
 
@@ -112,7 +110,6 @@ export function explainSolanaError(e: unknown): string {
 export class SolanaStabrixClient {
   readonly program: PublicKey
   readonly oracleAddress: PublicKey
-  private oracleCache: { at: number; state: OracleState } | null = null
 
   constructor(
     readonly connection: Connection,
@@ -152,55 +149,23 @@ export class SolanaStabrixClient {
     const info = await this.connection.getAccountInfo(this.oracleAddress)
     if (!info) throw new Error('Stabrix oracle not found on this cluster')
     const state = decodeOracle(info.data)
-    this.oracleCache = { at: Date.now(), state }
     return state
-  }
-
-  private async feedData(state: OracleState): Promise<Map<string, Uint8Array | null>> {
-    const keys = new Map<string, PublicKey>()
-    for (const e of state.entries) {
-      for (const f of [e.refFeed, e.marketFeed]) if (!f.equals(ZERO_KEY)) keys.set(f.toBase58(), f)
-    }
-    const list = [...keys.values()]
-    const infos = list.length ? await this.connection.getMultipleAccountsInfo(list) : []
-    return new Map(list.map((k, x) => [k.toBase58(), infos[x]?.data ?? null]))
   }
 
   private reported(state: OracleState, e: OracleEntry, t: number): bigint | null {
     return e.priceE9 !== 0n && t <= e.observedAt + state.reportMaxAge ? e.priceE9 : null
   }
 
-  private fxPrice(state: OracleState, e: OracleEntry, feeds: Map<string, Uint8Array | null>, t: number): bigint | null {
-    if (!e.fx) return E9
-    if (e.refFeed.equals(ZERO_KEY)) return this.reported(state, e, t)
-    const ref = readPyth(feeds.get(e.refFeed.toBase58()), e.refMaxAge, t)
-    if (ref == null) return null
-    const p = this.reported(state, e, t)
-    if (p == null) return ref
-    const diff = p > ref ? p - ref : ref - p
-    return diff * 10_000n > ref * BigInt(state.maxDeviationBps) ? ref : p
-  }
-
-  private depegPrice(state: OracleState, e: OracleEntry, feeds: Map<string, Uint8Array | null>, t: number): bigint | null {
-    let best = this.reported(state, e, t)
-    if (!e.marketFeed.equals(ZERO_KEY)) {
-      const m = readPyth(feeds.get(e.marketFeed.toBase58()), e.marketMaxAge, t)
-      if (m != null && (best == null || m < best)) best = m
-    }
-    return best
-  }
-
   async pricesE9(): Promise<{ state: OracleState; byMint: Map<string, { entry: OracleEntry; price: bigint | null; depeg: bigint | null; halted: boolean }> }> {
     const state = await this.oracle()
-    const feeds = await this.feedData(state)
     const t = now()
     const byMint = new Map<string, { entry: OracleEntry; price: bigint | null; depeg: bigint | null; halted: boolean }>()
     for (const e of state.entries) {
       const halted = e.reportHalted || e.guardianHalted
       byMint.set(lower(e.mint), {
         entry: e,
-        price: this.fxPrice(state, e, feeds, t),
-        depeg: halted ? this.depegPrice(state, e, feeds, t) : null,
+        price: e.fx ? this.reported(state, e, t) : E9,
+        depeg: halted ? this.reported(state, e, t) : null,
         halted,
       })
     }
@@ -412,19 +377,6 @@ export class SolanaStabrixClient {
     return weight === 0n ? null : weighted / weight
   }
 
-  private feedsFor(state: OracleState, mints: PublicKey[], depegMint?: PublicKey): PublicKey[] {
-    const out = new Map<string, PublicKey>()
-    for (const m of mints) {
-      const e = state.entries.find((x) => x.mint.equals(m))
-      if (e?.fx && !e.refFeed.equals(ZERO_KEY)) out.set(e.refFeed.toBase58(), e.refFeed)
-    }
-    if (depegMint) {
-      const e = state.entries.find((x) => x.mint.equals(depegMint))
-      if (e && !e.marketFeed.equals(ZERO_KEY)) out.set(e.marketFeed.toBase58(), e.marketFeed)
-    }
-    return [...out.values()]
-  }
-
   async send(signer: SolanaSigner, groups: TransactionInstruction[][], computeUnits?: number[]): Promise<string[]> {
     const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash('confirmed')
     const txs = groups.map((ixs, k) => {
@@ -452,7 +404,6 @@ export class SolanaStabrixClient {
     const taker = signer.publicKey
     const mintIn = new PublicKey(quote.tokenIn)
     const mintOut = new PublicKey(quote.tokenOut)
-    const state = this.oracleCache && Date.now() - this.oracleCache.at < 30_000 ? this.oracleCache.state : await this.oracle()
     const takerIn = this.ata(taker, mintIn)
     const takerOut = this.ata(taker, mintOut)
     const ixs: TransactionInstruction[] = [
@@ -464,7 +415,6 @@ export class SolanaStabrixClient {
       const mints = s.config.tokens.map((t) => new PublicKey(t))
       const i = mints.findIndex((m) => m.equals(mintIn))
       const j = mints.findIndex((m) => m.equals(mintOut))
-      const feeds = s.kind === 'range' ? this.feedsFor(state, mints) : this.feedsFor(state, [mintIn, mintOut], mintIn)
       ixs.push(
         ix.swap(this.program, {
           taker,
@@ -478,7 +428,6 @@ export class SolanaStabrixClient {
           takerOut,
           programIn: this.tokenProgram(mintIn),
           programOut: this.tokenProgram(mintOut),
-          feeds,
           i,
           j,
           amountIn: leg.amountIn,
@@ -560,7 +509,11 @@ export class SolanaStabrixClient {
     return groups
   }
 
-  private async openStrategy(signer: SolanaSigner, open: Parameters<typeof ix.open>[2]) {
+  private rent: number | null = null
+
+  private async openStrategy(signer: SolanaSigner, spec: Omit<Parameters<typeof ix.open>[2], 'rentLamports'>) {
+    this.rent ??= await this.connection.getMinimumBalanceForRentExemption(STRATEGY_LEN)
+    const open = { ...spec, rentLamports: this.rent }
     const prep = await this.approvals(signer.publicKey, open.mints)
     const groups = [...this.chunk(prep, 6), [ix.open(this.program, signer.publicKey, open)]]
     const sigs = await this.send(signer, groups)

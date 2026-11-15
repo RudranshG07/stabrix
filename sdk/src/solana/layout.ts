@@ -202,30 +202,19 @@ const i64 = (v: number) => {
 const meta = (pubkey: PublicKey, isWritable = false, isSigner = false) => ({ pubkey, isWritable, isSigner })
 
 export const ix = {
-  initOracle(program: PublicKey, admin: PublicKey, reporter: PublicKey, reportMaxAge: number, maxDeviationBps: number) {
+  initOracle(program: PublicKey, admin: PublicKey, reporter: PublicKey, reportMaxAge: number, maxDeviationBps: number, rentLamports: number) {
     return new TransactionInstruction({
       programId: program,
       keys: [meta(admin, true, true), meta(pda.oracle(program), true), meta(pda.programData(program)), meta(SystemProgram.programId)],
-      data: Buffer.concat([Buffer.from([0]), reporter.toBuffer(), u32(reportMaxAge), u16(maxDeviationBps)]),
+      data: Buffer.concat([Buffer.from([0]), reporter.toBuffer(), u32(reportMaxAge), u16(maxDeviationBps), u64(BigInt(rentLamports))]),
     })
   },
 
-  setCoin(
-    program: PublicKey,
-    admin: PublicKey,
-    mint: PublicKey,
-    c: { fx: boolean; refFeed?: PublicKey; refMaxAge?: number; marketFeed?: PublicKey; marketMaxAge?: number },
-  ) {
+  setCoin(program: PublicKey, admin: PublicKey, mint: PublicKey, c: { fx: boolean }) {
     return new TransactionInstruction({
       programId: program,
       keys: [meta(admin, false, true), meta(pda.oracle(program), true), meta(mint)],
-      data: Buffer.concat([
-        Buffer.from([1, c.fx ? 1 : 0]),
-        (c.refFeed ?? ZERO_KEY).toBuffer(),
-        u32(c.refMaxAge ?? 0),
-        (c.marketFeed ?? ZERO_KEY).toBuffer(),
-        u32(c.marketMaxAge ?? 0),
-      ]),
+      data: Buffer.from([1, c.fx ? 1 : 0]),
     })
   },
 
@@ -261,7 +250,7 @@ export const ix = {
   open(
     program: PublicKey,
     maker: PublicKey,
-    s: { kind: 'range' | 'backstop'; salt: bigint; mints: PublicKey[]; amounts: bigint[]; p1: number; p2: number; p3: number; a: bigint; b: bigint },
+    s: { kind: 'range' | 'backstop'; salt: bigint; mints: PublicKey[]; amounts: bigint[]; p1: number; p2: number; p3: number; a: bigint; b: bigint; rentLamports: number },
   ) {
     const n = s.mints.length
     return new TransactionInstruction({
@@ -278,6 +267,7 @@ export const ix = {
         u64(s.b),
         ...s.mints.map((m) => m.toBuffer()),
         ...s.amounts.map(u64),
+        u64(BigInt(s.rentLamports)),
       ]),
     })
   },
@@ -304,7 +294,6 @@ export const ix = {
       takerOut: PublicKey
       programIn: PublicKey
       programOut: PublicKey
-      feeds: PublicKey[]
       i: number
       j: number
       amountIn: bigint
@@ -326,7 +315,6 @@ export const ix = {
         meta(a.takerOut, true),
         meta(a.programIn),
         meta(a.programOut),
-        ...a.feeds.map((f) => meta(f)),
       ],
       data: Buffer.concat([Buffer.from([7, a.i, a.j]), u64(a.amountIn), u64(a.minOut)]),
     })
