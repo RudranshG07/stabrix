@@ -27,6 +27,11 @@ fn mul(a: u128, b: u128) -> Result<u128, E> {
 }
 
 #[inline]
+fn div(a: u128, b: u128) -> Result<u128, E> {
+    a.checked_div(b).ok_or(E::Overflow)
+}
+
+#[inline]
 fn add(a: u128, b: u128) -> Result<u128, E> {
     a.checked_add(b).ok_or(E::Overflow)
 }
@@ -37,8 +42,8 @@ pub fn pow10(d: u8) -> u64 {
 
 fn virtuals(c: &Coins, real: &[u64; MAX_COINS], floor: u128) -> Result<[u128; MAX_COINS], E> {
     let mut v = [0u128; MAX_COINS];
-    for k in 0..c.n {
-        v[k] = add(mul(real[k] as u128, c.price[k] as u128)? / c.unit[k] as u128, floor)?;
+    for k in 0..c.n.min(MAX_COINS) {
+        v[k] = add(div(mul(real[k] as u128, c.price[k] as u128)?, c.unit[k] as u128)?, floor)?;
     }
     Ok(v)
 }
@@ -51,11 +56,11 @@ pub fn radius(v: &[u128; MAX_COINS], n: usize) -> Result<u128, E> {
         q = add(q, mul(*x, *x)?)?;
     }
     let ss = mul(s, s)?;
-    let nq = mul((n - 1) as u128, q)?;
+    let nq = mul(n.saturating_sub(1) as u128, q)?;
     if ss < nq {
         return Err(E::OffSurface);
     }
-    Ok(add(s, sqrt(ss - nq))? / (n - 1) as u128)
+    div(add(s, sqrt(ss - nq))?, n.saturating_sub(1) as u128)
 }
 
 fn sum_sq_except(v: &[u128; MAX_COINS], n: usize, r: u128, i: usize, j: usize) -> Result<u128, E> {
@@ -77,6 +82,10 @@ pub fn exact_in(c: &Coins, p: &Range, i: usize, j: usize, amount_in: u64) -> Res
     if i == j {
         return Err(E::SameToken);
     }
+    if c.n < 2 || c.n > MAX_COINS || i >= c.n || j >= c.n {
+        return Err(E::OutOfRange);
+    }
+    let (i, j) = (i % MAX_COINS, j % MAX_COINS);
     if amount_in == 0 {
         return Err(E::ZeroAmount);
     }
@@ -84,7 +93,7 @@ pub fn exact_in(c: &Coins, p: &Range, i: usize, j: usize, amount_in: u64) -> Res
     let r = radius(&v, c.n)?;
 
     let net = mul(amount_in as u128, BPS - p.fee_bps as u128)? / BPS;
-    let vi = add(v[i], mul(net, c.price[i] as u128)? / c.unit[i] as u128)?;
+    let vi = add(v[i], div(mul(net, c.price[i] as u128)?, c.unit[i] as u128)?)?;
     if vi > r {
         return Err(E::OutOfRange);
     }
@@ -97,7 +106,7 @@ pub fn exact_in(c: &Coins, p: &Range, i: usize, j: usize, amount_in: u64) -> Res
     if vj >= v[j] {
         return Err(E::ZeroAmount);
     }
-    let out = mul(v[j] - vj, c.unit[j] as u128)? / c.price[j] as u128;
+    let out = div(mul(v[j] - vj, c.unit[j] as u128)?, c.price[j] as u128)?;
     if out <= 1 {
         return Err(E::ZeroAmount);
     }
@@ -107,6 +116,10 @@ pub fn exact_in(c: &Coins, p: &Range, i: usize, j: usize, amount_in: u64) -> Res
 }
 
 fn verify(c: &Coins, p: &Range, i: usize, j: usize, amount_in: u64, amount_out: u64, r_before: u128) -> Result<(), E> {
+    if i >= MAX_COINS || j >= MAX_COINS {
+        return Err(E::OutOfRange);
+    }
+    let (i, j) = (i % MAX_COINS, j % MAX_COINS);
     if amount_out > c.real[j] {
         return Err(E::InsufficientReserve);
     }
@@ -154,21 +167,24 @@ pub fn backstop_out(x: &BackstopQuote) -> Result<u64, E> {
         return Err(E::ZeroAmount);
     }
     let unit_in = x.unit_in as u128;
-    let absorbed = mul(x.absorbed_in as u128, x.face_in as u128)? / unit_in;
-    let incoming = mul(x.amount_in as u128, x.face_in as u128)? / unit_in;
+    let absorbed = div(mul(x.absorbed_in as u128, x.face_in as u128)?, unit_in)?;
+    let incoming = div(mul(x.amount_in as u128, x.face_in as u128)?, unit_in)?;
     if add(absorbed, incoming)? > x.cap as u128 {
         return Err(E::BackstopFull);
     }
-    let span = (x.end_bps - x.start_bps) as u128;
+    let span = x.end_bps.saturating_sub(x.start_bps) as u128;
     let two_cap = 2 * x.cap as u128;
     let numer = add(mul(x.start_bps as u128, two_cap)?, mul(span, add(2 * absorbed, incoming)?)?)?;
+    if two_cap == 0 {
+        return Err(E::Overflow);
+    }
     let discount = ceil_div(mul(numer, 100_000)?, two_cap);
     if discount >= E9 {
         return Err(E::ZeroAmount);
     }
     let market = x.market_in.min(x.face_in) as u128;
-    let value = mul(mul(x.amount_in as u128, market)?, E9 - discount)? / mul(unit_in, E9)?;
-    let out = mul(value, x.unit_out as u128)? / x.price_out as u128;
+    let value = div(mul(mul(x.amount_in as u128, market)?, E9 - discount)?, mul(unit_in, E9)?)?;
+    let out = div(mul(value, x.unit_out as u128)?, x.price_out as u128)?;
     if out <= 1 {
         return Err(E::ZeroAmount);
     }
@@ -176,7 +192,7 @@ pub fn backstop_out(x: &BackstopQuote) -> Result<u64, E> {
 }
 
 pub fn ceil_div(a: u128, b: u128) -> u128 {
-    if a == 0 {
+    if a == 0 || b == 0 {
         0
     } else {
         (a - 1) / b + 1
@@ -189,7 +205,7 @@ pub fn sqrt(a: u128) -> u128 {
     }
     let mut x = 1u128 << ((128 - a.leading_zeros()).div_ceil(2));
     loop {
-        let y = (x + a / x) >> 1;
+        let y = (x + a / x.max(1)) >> 1;
         if y >= x {
             return x;
         }

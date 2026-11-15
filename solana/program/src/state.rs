@@ -20,12 +20,8 @@ pub mod oracle {
 
 pub mod entry {
     pub const MINT: usize = 0;
-    pub const REF_FEED: usize = 32;
-    pub const MARKET_FEED: usize = 64;
     pub const PRICE: usize = 96;
     pub const OBSERVED_AT: usize = 104;
-    pub const REF_MAX_AGE: usize = 112;
-    pub const MARKET_MAX_AGE: usize = 116;
     pub const DECIMALS: usize = 120;
     pub const FLAGS: usize = 121;
     pub const TOKEN_PROGRAM: usize = 122;
@@ -65,47 +61,67 @@ pub mod token {
     pub const LEN: usize = 165;
 }
 
-#[inline]
+// Every reader below is called only on account data whose length was checked against the
+// fixed layout first (oracle, strategy, token account, mint, program data), so the reads stay
+// in bounds without pulling in the panic and formatting machinery.
+
+#[inline(always)]
+fn read<const N: usize>(d: &[u8], o: usize) -> [u8; N] {
+    debug_assert!(o + N <= d.len());
+    unsafe { core::ptr::read_unaligned(d.as_ptr().add(o) as *const [u8; N]) }
+}
+
+#[inline(always)]
+pub fn byte(d: &[u8], o: usize) -> u8 {
+    debug_assert!(o < d.len());
+    unsafe { *d.get_unchecked(o) }
+}
+
+#[inline(always)]
+pub fn set_byte(d: &mut [u8], o: usize, v: u8) {
+    debug_assert!(o < d.len());
+    unsafe { *d.get_unchecked_mut(o) = v }
+}
+
+#[inline(always)]
 pub fn u16_at(d: &[u8], o: usize) -> u16 {
-    u16::from_le_bytes([d[o], d[o + 1]])
+    u16::from_le_bytes(read(d, o))
 }
 
-#[inline]
+#[inline(always)]
 pub fn u32_at(d: &[u8], o: usize) -> u32 {
-    let mut b = [0u8; 4];
-    b.copy_from_slice(&d[o..o + 4]);
-    u32::from_le_bytes(b)
+    u32::from_le_bytes(read(d, o))
 }
 
-#[inline]
+#[inline(always)]
 pub fn u64_at(d: &[u8], o: usize) -> u64 {
-    let mut b = [0u8; 8];
-    b.copy_from_slice(&d[o..o + 8]);
-    u64::from_le_bytes(b)
+    u64::from_le_bytes(read(d, o))
 }
 
-#[inline]
+#[inline(always)]
 pub fn i64_at(d: &[u8], o: usize) -> i64 {
-    u64_at(d, o) as i64
+    i64::from_le_bytes(read(d, o))
 }
 
-#[inline]
+#[inline(always)]
 pub fn key_at(d: &[u8], o: usize) -> Pubkey {
-    let mut k = [0u8; 32];
-    k.copy_from_slice(&d[o..o + 32]);
-    k
+    read(d, o)
 }
 
-#[inline]
+#[inline(always)]
 pub fn put(d: &mut [u8], o: usize, bytes: &[u8]) {
-    d[o..o + bytes.len()].copy_from_slice(bytes);
+    debug_assert!(o + bytes.len() <= d.len());
+    unsafe { core::ptr::copy_nonoverlapping(bytes.as_ptr(), d.as_mut_ptr().add(o), bytes.len()) }
 }
 
 pub fn entry_offset(k: usize) -> usize {
     ORACLE_HEADER + k * ENTRY_LEN
 }
 
+pub fn entries(oracle: &[u8]) -> usize {
+    (byte(oracle, oracle::COUNT) as usize).min(MAX_ENTRIES)
+}
+
 pub fn find_entry(oracle: &[u8], mint: &Pubkey) -> Option<usize> {
-    let count = oracle[oracle::COUNT] as usize;
-    (0..count).map(entry_offset).find(|&o| oracle[o + entry::MINT..o + entry::MINT + 32] == mint[..])
+    (0..entries(oracle)).map(entry_offset).find(|&o| key_at(oracle, o + entry::MINT) == *mint)
 }

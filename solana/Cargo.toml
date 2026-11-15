@@ -3,9 +3,9 @@ members = ["program"]
 resolver = "2"
 
 [profile.release]
-overflow-checks = true
+overflow-checks = false
 lto = "fat"
 codegen-units = 1
 opt-level = "s"
-strip = true
+strip = false
 panic = "abort"

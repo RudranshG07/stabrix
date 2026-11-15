@@ -13,8 +13,8 @@ mod program {
         instruction::{AccountMeta, Instruction, Seed, Signer},
         log::sol_log_data,
         program_error::ProgramError,
-        pubkey::{create_program_address, find_program_address, Pubkey},
-        sysvars::{clock::Clock, rent::Rent, Sysvar},
+        pubkey::{create_program_address, try_find_program_address, Pubkey},
+        sysvars::{clock::Clock, Sysvar},
         ProgramResult,
     };
     use pinocchio_system::instructions::CreateAccount;
@@ -24,7 +24,31 @@ mod program {
     use crate::price::Ctx;
     use crate::state::*;
 
-    pinocchio::program_entrypoint!(process);
+    pinocchio::lazy_program_entrypoint!(entry);
+
+    const MAX_ACCOUNTS: usize = 12;
+
+    fn entry(mut ctx: pinocchio::entrypoint::lazy::InstructionContext) -> ProgramResult {
+        use core::mem::MaybeUninit;
+        use pinocchio::entrypoint::lazy::MaybeAccount;
+        let n = ctx.remaining() as usize;
+        if n > MAX_ACCOUNTS {
+            return Err(ProgramError::InvalidArgument);
+        }
+        let mut buf = [const { MaybeUninit::<AccountInfo>::uninit() }; MAX_ACCOUNTS];
+        for k in 0..n {
+            let a = match ctx.next_account()? {
+                MaybeAccount::Account(a) => a,
+                MaybeAccount::Duplicated(i) if (i as usize) < k => unsafe { buf.get_unchecked(i as usize).assume_init() },
+                MaybeAccount::Duplicated(_) => return Err(ProgramError::InvalidArgument),
+            };
+            unsafe { buf.get_unchecked_mut(k).write(a) };
+        }
+        let accounts = unsafe { core::slice::from_raw_parts(buf.as_ptr() as *const AccountInfo, n) };
+        let data = ctx.instruction_data()?;
+        let program_id = ctx.program_id()?;
+        process(program_id, accounts, data)
+    }
     pinocchio::no_allocator!();
     pinocchio::nostd_panic_handler!();
 
@@ -67,6 +91,10 @@ mod program {
             .ok_or(ProgramError::InvalidInstructionData)
     }
 
+    fn pda(seeds: &[&[u8]], program: &Pubkey) -> Result<(Pubkey, u8), ProgramError> {
+        try_find_program_address(seeds, program).ok_or(ProgramError::InvalidSeeds)
+    }
+
     fn now() -> Result<i64, ProgramError> {
         Ok(Clock::get()?.unix_timestamp)
     }
@@ -83,7 +111,7 @@ mod program {
         if !a.is_owned_by(program_id) || a.data_len() != ORACLE_LEN {
             return Err(E::BadAccount.into());
         }
-        if a.try_borrow_data()?[0] != ORACLE_TAG {
+        if byte(&a.try_borrow_data()?, 0) != ORACLE_TAG {
             return Err(E::BadAccount.into());
         }
         Ok(())
@@ -105,14 +133,14 @@ mod program {
         Ok(())
     }
 
-    fn create_pda(payer: &AccountInfo, target: &AccountInfo, program_id: &Pubkey, len: usize, seeds: &[Seed]) -> ProgramResult {
+    fn create_pda(payer: &AccountInfo, target: &AccountInfo, program_id: &Pubkey, len: usize, lamports: u64, seeds: &[Seed]) -> ProgramResult {
         if target.lamports() != 0 || !target.data_is_empty() {
             return Err(ProgramError::AccountAlreadyInitialized);
         }
         CreateAccount {
             from: payer,
             to: target,
-            lamports: Rent::get()?.minimum_balance(len),
+            lamports,
             space: len as u64,
             owner: program_id,
         }
@@ -124,30 +152,31 @@ mod program {
             return Err(ProgramError::NotEnoughAccountKeys);
         };
         signer(admin)?;
-        let (expected_data, _) = find_program_address(&[program_id.as_ref()], &LOADER);
+        let (expected_data, _) = pda(&[program_id.as_ref()], &LOADER)?;
         if program_data.key() != &expected_data || !program_data.is_owned_by(&LOADER) {
             return Err(E::BadAccount.into());
         }
         {
             let pd = program_data.try_borrow_data()?;
-            if pd.len() < 45 || pd[0] != 3 || pd[12] != 1 || pd[13..45] != admin.key()[..] {
+            if pd.len() < 45 || byte(&pd, 0) != 3 || byte(&pd, 12) != 1 || key_at(&pd, 13) != *admin.key() {
                 return Err(E::Unauthorized.into());
             }
         }
         let reporter: [u8; 32] = args(d, 0)?;
         let max_age = u32::from_le_bytes(args(d, 32)?);
         let max_dev = u16::from_le_bytes(args(d, 36)?);
+        let lamports = u64::from_le_bytes(args(d, 38)?);
         check_limits(max_age, max_dev)?;
 
-        let (expected, bump) = find_program_address(&[b"oracle"], program_id);
+        let (expected, bump) = pda(&[b"oracle"], program_id)?;
         if oracle.key() != &expected {
             return Err(E::BadAccount.into());
         }
         let bump_seed = [bump];
-        create_pda(admin, oracle, program_id, ORACLE_LEN, &[Seed::from(b"oracle"), Seed::from(&bump_seed)])?;
+        create_pda(admin, oracle, program_id, ORACLE_LEN, lamports, &[Seed::from(b"oracle"), Seed::from(&bump_seed)])?;
         let mut o = oracle.try_borrow_mut_data()?;
-        o[0] = ORACLE_TAG;
-        o[crate::state::oracle::BUMP] = bump;
+        set_byte(&mut o, 0, ORACLE_TAG);
+        set_byte(&mut o, crate::state::oracle::BUMP, bump);
         put(&mut o, crate::state::oracle::REPORT_MAX_AGE, &max_age.to_le_bytes());
         put(&mut o, crate::state::oracle::MAX_DEV_BPS, &max_dev.to_le_bytes());
         put(&mut o, crate::state::oracle::ADMIN, admin.key());
@@ -173,41 +202,34 @@ mod program {
         let program = token_program_of(mint)?;
         let decimals = {
             let m = mint.try_borrow_data()?;
-            if m.len() < 82 || m[45] != 1 {
+            if m.len() < 82 || byte(&m, 45) != 1 {
                 return Err(E::BadAccount.into());
             }
-            m[44]
+            byte(&m, 44)
         };
         if decimals > 18 {
             return Err(E::BadConfig.into());
         }
         let fx = args::<1>(d, 0)?[0] != 0;
-        let ref_feed: [u8; 32] = args(d, 1)?;
-        let ref_max_age: [u8; 4] = args(d, 33)?;
-        let market_feed: [u8; 32] = args(d, 37)?;
-        let market_max_age: [u8; 4] = args(d, 69)?;
 
         let mut o = oracle.try_borrow_mut_data()?;
         let at = match find_entry(&o, mint.key()) {
             Some(at) => at,
             None => {
-                let count = o[crate::state::oracle::COUNT] as usize;
+                let count = entries(&o);
                 if count >= MAX_ENTRIES {
                     return Err(E::OracleFull.into());
                 }
-                o[crate::state::oracle::COUNT] = count as u8 + 1;
+                set_byte(&mut o, crate::state::oracle::COUNT, count as u8 + 1);
                 let at = entry_offset(count);
                 put(&mut o, at + entry::MINT, mint.key());
                 at
             }
         };
-        put(&mut o, at + entry::REF_FEED, &ref_feed);
-        put(&mut o, at + entry::REF_MAX_AGE, &ref_max_age);
-        put(&mut o, at + entry::MARKET_FEED, &market_feed);
-        put(&mut o, at + entry::MARKET_MAX_AGE, &market_max_age);
-        o[at + entry::DECIMALS] = decimals;
-        o[at + entry::TOKEN_PROGRAM] = program;
-        o[at + entry::FLAGS] = (o[at + entry::FLAGS] & !FX) | if fx { FX } else { 0 };
+        set_byte(&mut o, at + entry::DECIMALS, decimals);
+        set_byte(&mut o, at + entry::TOKEN_PROGRAM, program);
+        let flags = byte(&o, at + entry::FLAGS);
+        set_byte(&mut o, at + entry::FLAGS, (flags & !FX) | if fx { FX } else { 0 });
         Ok(())
     }
 
@@ -247,13 +269,13 @@ mod program {
         if key_at(&o, crate::state::oracle::REPORTER) != *reporter.key() {
             return Err(E::Unauthorized.into());
         }
-        let entries = o[crate::state::oracle::COUNT] as usize;
+        let listed = entries(&o);
         for k in 0..count {
             let base = 9 + k * 10;
             let index = args::<1>(d, base)?[0] as usize;
             let price = u64::from_le_bytes(args(d, base + 1)?);
             let halted = args::<1>(d, base + 9)?[0] != 0;
-            if index >= entries {
+            if index >= listed {
                 return Err(E::UnknownCoin.into());
             }
             let at = entry_offset(index);
@@ -262,8 +284,9 @@ mod program {
             }
             put(&mut o, at + entry::PRICE, &price.to_le_bytes());
             put(&mut o, at + entry::OBSERVED_AT, &observed_at.to_le_bytes());
-            o[at + entry::FLAGS] = (o[at + entry::FLAGS] & !HALTED) | if halted { HALTED } else { 0 };
-            sol_log_data(&[b"report", &o[at + entry::MINT..at + entry::MINT + 32], &price.to_le_bytes(), &[halted as u8], &observed_at.to_le_bytes()]);
+            let flags = byte(&o, at + entry::FLAGS);
+            set_byte(&mut o, at + entry::FLAGS, (flags & !HALTED) | if halted { HALTED } else { 0 });
+            sol_log_data(&[b"report", &key_at(&o, at + entry::MINT), &price.to_le_bytes(), &[halted as u8], &observed_at.to_le_bytes()]);
         }
         Ok(())
     }
@@ -276,13 +299,13 @@ mod program {
         let index = args::<1>(d, 0)?[0] as usize;
         let halted = args::<1>(d, 1)?[0] != 0;
         let mut o = oracle.try_borrow_mut_data()?;
-        if index >= o[crate::state::oracle::COUNT] as usize {
+        if index >= entries(&o) {
             return Err(E::UnknownCoin.into());
         }
         let at = entry_offset(index);
-        let flags = o[at + entry::FLAGS];
-        o[at + entry::FLAGS] = if halted { flags | GUARDIAN } else { flags & !(GUARDIAN | HALTED) };
-        sol_log_data(&[b"guardian", &o[at + entry::MINT..at + entry::MINT + 32], &[halted as u8]]);
+        let flags = byte(&o, at + entry::FLAGS);
+        set_byte(&mut o, at + entry::FLAGS, if halted { flags | GUARDIAN } else { flags & !(GUARDIAN | HALTED) });
+        sol_log_data(&[b"guardian", &key_at(&o, at + entry::MINT), &[halted as u8]]);
         Ok(())
     }
 
@@ -317,26 +340,28 @@ mod program {
             _ => return Err(E::BadConfig.into()),
         }
 
-        let (expected, bump) = find_program_address(&[b"strategy", maker.key(), &salt], program_id);
+        let (expected, bump) = pda(&[b"strategy", maker.key(), &salt], program_id)?;
         if strat.key() != &expected {
             return Err(E::BadAccount.into());
         }
-        let (_, delegate_bump) = find_program_address(&[b"delegate", maker.key()], program_id);
+        let (_, delegate_bump) = pda(&[b"delegate", maker.key()], program_id)?;
+        let lamports = u64::from_le_bytes(args(d, 32 + 40 * n)?);
         let bump_seed = [bump];
         create_pda(
             maker,
             strat,
             program_id,
             STRATEGY_LEN,
+            lamports,
             &[Seed::from(b"strategy"), Seed::from(maker.key()), Seed::from(&salt), Seed::from(&bump_seed)],
         )?;
 
         let o = oracle.try_borrow_data()?;
         let mut s = strat.try_borrow_mut_data()?;
-        s[0] = kind;
-        s[strategy::BUMP] = bump;
-        s[strategy::DELEGATE_BUMP] = delegate_bump;
-        s[strategy::N] = n as u8;
+        set_byte(&mut s, 0, kind);
+        set_byte(&mut s, strategy::BUMP, bump);
+        set_byte(&mut s, strategy::DELEGATE_BUMP, delegate_bump);
+        set_byte(&mut s, strategy::N, n as u8);
         put(&mut s, strategy::P1, &p1.to_le_bytes());
         put(&mut s, strategy::P2, &p2.to_le_bytes());
         put(&mut s, strategy::P3, &p3.to_le_bytes());
@@ -356,7 +381,7 @@ mod program {
             let at = find_entry(&o, &mint).ok_or(E::UnknownCoin)?;
             put(&mut s, strategy::MINTS + 32 * k, &mint);
             put(&mut s, strategy::BALANCES + 8 * k, &amount);
-            s[strategy::DECIMALS + k] = o[at + entry::DECIMALS];
+            set_byte(&mut s, strategy::DECIMALS + k, byte(&o, at + entry::DECIMALS));
         }
         sol_log_data(&[b"open", strat.key(), maker.key(), &[kind]]);
         Ok(())
@@ -372,7 +397,7 @@ mod program {
         }
         {
             let s = strat.try_borrow_data()?;
-            if (s[0] != RANGE_TAG && s[0] != BACKSTOP_TAG) || key_at(&s, strategy::MAKER) != *maker.key() {
+            if (byte(&s, 0) != RANGE_TAG && byte(&s, 0) != BACKSTOP_TAG) || key_at(&s, strategy::MAKER) != *maker.key() {
                 return Err(E::Unauthorized.into());
             }
         }
@@ -394,11 +419,11 @@ mod program {
             return Err(E::BadAccount.into());
         }
         let d = a.try_borrow_data()?;
-        if d.len() < token::LEN || d[token::MINT..token::MINT + 32] != mint[..] || d[token::STATE] != 1 {
+        if d.len() < token::LEN || key_at(&d, token::MINT) != *mint || byte(&d, token::STATE) != 1 {
             return Err(E::BadAccount.into());
         }
         if let Some(owner) = owner {
-            if d[token::OWNER..token::OWNER + 32] != owner[..] {
+            if key_at(&d, token::OWNER) != *owner {
                 return Err(E::BadAccount.into());
             }
         }
@@ -416,10 +441,8 @@ mod program {
         decimals: u8,
         signers: &[Signer],
     ) -> ProgramResult {
-        let mut data = [0u8; 10];
-        data[0] = 12;
-        data[1..9].copy_from_slice(&amount.to_le_bytes());
-        data[9] = decimals;
+        let a = amount.to_le_bytes();
+        let data = [12, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], decimals];
         let metas = [
             AccountMeta::writable(from.key()),
             AccountMeta::readonly(mint.key()),
@@ -430,7 +453,7 @@ mod program {
     }
 
     fn swap(program_id: &Pubkey, accounts: &[AccountInfo], d: &[u8]) -> ProgramResult {
-        let [taker, strat, oracle, delegate, mint_in, mint_out, maker_in, maker_out, taker_in, taker_out, tp_in, tp_out, feeds @ ..] =
+        let [taker, strat, oracle, delegate, mint_in, mint_out, maker_in, maker_out, taker_in, taker_out, tp_in, tp_out, ..] =
             accounts
         else {
             return Err(ProgramError::NotEnoughAccountKeys);
@@ -447,20 +470,21 @@ mod program {
 
         let (kind, n, maker, delegate_bump) = {
             let s = strat.try_borrow_data()?;
-            (s[0], s[strategy::N] as usize, key_at(&s, strategy::MAKER), s[strategy::DELEGATE_BUMP])
+            (byte(&s, 0), byte(&s, strategy::N) as usize, key_at(&s, strategy::MAKER), byte(&s, strategy::DELEGATE_BUMP))
         };
-        if kind != RANGE_TAG && kind != BACKSTOP_TAG {
+        if kind != RANGE_TAG && kind != BACKSTOP_TAG || n > MAX_COINS {
             return Err(E::BadAccount.into());
         }
         if i == j || i >= n || j >= n {
             return Err(E::SameToken.into());
         }
+        let (n, i, j) = (n % (MAX_COINS + 1), i % MAX_COINS, j % MAX_COINS);
         let (dec_in, dec_out) = {
             let s = strat.try_borrow_data()?;
             if key_at(&s, strategy::MINTS + 32 * i) != *mint_in.key() || key_at(&s, strategy::MINTS + 32 * j) != *mint_out.key() {
                 return Err(E::BadAccount.into());
             }
-            (s[strategy::DECIMALS + i], s[strategy::DECIMALS + j])
+            (byte(&s, strategy::DECIMALS + i), byte(&s, strategy::DECIMALS + j))
         };
         for (tp, mint) in [(tp_in, mint_in), (tp_out, mint_out)] {
             if (tp.key() != &TOKEN && tp.key() != &TOKEN_2022) || !mint.is_owned_by(tp.key()) {
@@ -481,13 +505,13 @@ mod program {
 
         let now = now()?;
         let o = oracle.try_borrow_data()?;
-        let ctx = Ctx { oracle: &o, feeds, now };
+        let ctx = Ctx { oracle: &o, now };
         let out = {
             let s = strat.try_borrow_data()?;
             let mut c = Coins { n, real: [0; MAX_COINS], price: [0; MAX_COINS], unit: [1; MAX_COINS] };
-            for k in 0..n {
-                c.real[k] = u64_at(&s, strategy::BALANCES + 8 * k);
-                c.unit[k] = math::pow10(s[strategy::DECIMALS + k]);
+            for (k, (real, unit)) in c.real.iter_mut().zip(c.unit.iter_mut()).enumerate().take(n) {
+                *real = u64_at(&s, strategy::BALANCES + 8 * k);
+                *unit = math::pow10(byte(&s, strategy::DECIMALS + k));
             }
             let at_in = find_entry(&o, mint_in.key()).ok_or(E::UnknownCoin)?;
             let at_out = find_entry(&o, mint_out.key()).ok_or(E::UnknownCoin)?;
@@ -496,9 +520,9 @@ mod program {
                     return Err(E::Halted.into());
                 }
                 let mut fx = false;
-                for k in 0..n {
+                for (k, price) in c.price.iter_mut().enumerate().take(n) {
                     let at = find_entry(&o, &key_at(&s, strategy::MINTS + 32 * k)).ok_or(E::UnknownCoin)?;
-                    c.price[k] = ctx.price(at)?;
+                    *price = ctx.price(at)?;
                     if (k == i || k == j) && ctx.is_fx(at) {
                         fx = true;
                     }
@@ -572,13 +596,12 @@ mod program {
             return Err(E::BadTokenProgram.into());
         }
         let amount = u64::from_le_bytes(args(d, 0)?);
-        let (expected, bump) = find_program_address(&[b"faucet"], program_id);
+        let (expected, bump) = pda(&[b"faucet"], program_id)?;
         if authority.key() != &expected {
             return Err(E::BadAccount.into());
         }
-        let mut data = [0u8; 9];
-        data[0] = 7;
-        data[1..9].copy_from_slice(&amount.to_le_bytes());
+        let a = amount.to_le_bytes();
+        let data = [7, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]];
         let metas = [AccountMeta::writable(mint.key()), AccountMeta::writable(user_ata.key()), AccountMeta::readonly_signer(authority.key())];
         let bump_seed = [bump];
         let seeds = [Seed::from(b"faucet"), Seed::from(&bump_seed)];
