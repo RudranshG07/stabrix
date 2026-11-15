@@ -109,7 +109,10 @@ function PartnerMarks({ solana }: { solana: boolean }) {
   if (solana) {
     return (
       <>
-        <span>Solana program</span>
+        <span className="flex items-center gap-1.5">
+          <Image src="/brand/solana.svg" alt="" width={32} height={32} className="size-4 rounded-full" />
+          Solana program
+        </span>
         <span>Sentinel oracle</span>
         <span>SPL Token + Token-2022</span>
       </>
@@ -125,7 +128,10 @@ function PartnerMarks({ solana }: { solana: boolean }) {
         <Image src="/brand/chainlink.png" alt="" width={32} height={32} className="size-4 rounded-full" />
         Chainlink CRE
       </span>
-      <span>Base</span>
+      <span className="flex items-center gap-1.5">
+        <Image src="/brand/base.svg" alt="" width={32} height={32} className="size-4 rounded-full" />
+        Base
+      </span>
     </>
   )
 }

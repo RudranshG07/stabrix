@@ -599,7 +599,10 @@ export function Saltwake() {
               and backs every stablecoin when one breaks
             </p>
             <div className="stamps">
-              <span>Solana</span>
+              <span>
+                <Image src="/brand/solana.svg" alt="" width={32} height={32} />
+                Solana
+              </span>
               <span>
                 <Image src="/brand/1inch.png" alt="" width={32} height={32} />
                 1inch Aqua + SwapVM
@@ -608,7 +611,10 @@ export function Saltwake() {
                 <Image src="/brand/chainlink.png" alt="" width={32} height={32} />
                 Chainlink CRE
               </span>
-              <span>Base</span>
+              <span>
+                <Image src="/brand/base.svg" alt="" width={32} height={32} />
+                Base
+              </span>
             </div>
             <a href="#" className="pill" data-go="1">
               Weather a depeg
