@@ -393,11 +393,23 @@ export class SolanaStabrixClient {
       } catch (e) {
         throw new SolanaError(explainSolanaError(e), null)
       }
-      const res = await this.connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, 'confirmed')
-      if (res.value.err) throw new SolanaError(`transaction ${sig} failed: ${explainSolanaError(JSON.stringify(res.value.err))}`, null)
+      await this.confirm(sig, lastValidBlockHeight)
       sigs.push(sig)
     }
     return sigs
+  }
+
+  private async confirm(signature: string, lastValidBlockHeight: number) {
+    for (let k = 0; ; k++) {
+      const { value } = await this.connection.getSignatureStatuses([signature])
+      const status = value[0]
+      if (status?.err) throw new SolanaError(`transaction ${signature} failed: ${explainSolanaError(JSON.stringify(status.err))}`, null)
+      if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') return
+      if (k % 5 === 4 && (await this.connection.getBlockHeight('confirmed')) > lastValidBlockHeight) {
+        throw new SolanaError(`transaction ${signature} expired before it confirmed, so it was not applied. Try again.`, null)
+      }
+      await new Promise((r) => setTimeout(r, 1000))
+    }
   }
 
   async swap(signer: SolanaSigner, quote: Quote, slippageBps: number) {
