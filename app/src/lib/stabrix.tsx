@@ -198,7 +198,10 @@ function useChain(deployment: Deployment, rpcUrl: string) {
 
 function SolanaInner({ deployment, sol, rpcUrl, children }: { deployment: Deployment; sol: SolanaDeployment; rpcUrl: string; children: ReactNode }) {
   const chain = useChain(deployment, rpcUrl)
-  const solana = useMemo(() => new SolanaStabrixClient(new Connection(rpcUrl, 'confirmed'), sol), [rpcUrl, sol])
+  const solana = useMemo(() => {
+    const endpoint = rpcUrl.startsWith('/') ? `${window.location.origin}${rpcUrl}` : rpcUrl
+    return new SolanaStabrixClient(new Connection(endpoint, 'confirmed'), sol)
+  }, [rpcUrl, sol])
   const options = useSolanaWallets(true)
   const [signer, setSigner] = useState<Signer | null>(null)
   const [wallet, setWallet] = useState<SolanaSigner | null>(null)

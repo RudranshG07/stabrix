@@ -2,8 +2,8 @@ export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ?? 'http://127.0.0.1:8555
 export const PUBLIC_RPCS: Record<number, string> = {
   8453: process.env.NEXT_PUBLIC_RPC_URL_8453 ?? 'https://base-rpc.publicnode.com',
   84532: process.env.NEXT_PUBLIC_RPC_URL_84532 ?? 'https://base-sepolia-rpc.publicnode.com',
-  101: process.env.NEXT_PUBLIC_RPC_URL_101 ?? 'https://api.mainnet-beta.solana.com',
-  103: process.env.NEXT_PUBLIC_RPC_URL_103 ?? 'https://api.devnet.solana.com',
+  101: process.env.NEXT_PUBLIC_RPC_URL_101 ?? '/api/rpc?chain=101',
+  103: process.env.NEXT_PUBLIC_RPC_URL_103 ?? '/api/rpc?chain=103',
   104: process.env.NEXT_PUBLIC_RPC_URL_104 ?? 'http://127.0.0.1:8899',
 }
 export const NETWORK_LABELS: Record<string, string> = {
