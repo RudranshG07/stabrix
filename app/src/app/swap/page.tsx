@@ -105,7 +105,7 @@ export default function SwapPage() {
   else if (inHalted && (!quote || quote.legs.length === 0))
     [cta, blocked] = [payouts.length && !payouts.some((t) => t.address === tokenOut) ? `Backstops pay in ${payoutNames}` : `No backstop is buying ${tIn.symbol}`, true]
   else if (quote && quote.legs.length > 0 && quote.filled < quote.amountIn) [cta, blocked] = ['Not enough liquidity', true]
-  else if (!quote || quote.legs.length === 0) [cta, blocked] = [stale.length ? `${copy.oracle} rate is stale` : onlyMine ? 'No other wallet holds this pair' : 'No route', true]
+  else if (!quote || quote.legs.length === 0) [cta, blocked] = [stale.length ? (kind === 'solana' ? 'Oracle rate is stale' : `${copy.oracle} rate is stale`) : onlyMine ? 'No other wallet holds this pair' : 'No route', true]
   else if (inHalted) cta = `Sell ${tIn.symbol} to the backstops`
 
   const swap = () =>
@@ -203,7 +203,7 @@ export default function SwapPage() {
 
           <dl className="mt-5 divide-y divide-line">
             <Row term="Rate">{rate ? `1 ${tIn.symbol} = ${formatRatio(rate)} ${tOut.symbol}` : '-'}</Row>
-            <Row term={`Value vs ${copy.oracle}`} tone={value !== null && value < -1 ? 'down' : undefined}>
+            <Row term={kind === 'solana' ? 'Value vs oracle' : `Value vs ${copy.oracle}`} tone={value !== null && value < -1 ? 'down' : undefined}>
               {value === null ? '-' : formatPct(value, 3)}
             </Row>
             <Row term="Minimum received">{quote ? `${formatAmount(minOut, tOut.decimals, 4)} ${tOut.symbol}` : '-'}</Row>
@@ -288,7 +288,7 @@ export default function SwapPage() {
 
           <Panel className="p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3">
-              <Label>{copy.oracle} prices</Label>
+              <Label>{kind === 'solana' ? 'Oracle prices' : `${copy.oracle} prices`}</Label>
               <span className="text-[10.5px] font-medium tracking-[0.08em] text-muted uppercase">{kind === 'solana' ? 'checked by the sentinel' : 'guarded by CRE'}</span>
             </div>
             <ul className="mt-3 divide-y divide-line">

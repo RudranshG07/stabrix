@@ -110,7 +110,7 @@ function PartnerMarks({ solana }: { solana: boolean }) {
     return (
       <>
         <span>Solana program</span>
-        <span>Pyth prices</span>
+        <span>Sentinel oracle</span>
         <span>SPL Token + Token-2022</span>
       </>
     )

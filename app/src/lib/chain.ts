@@ -54,17 +54,18 @@ const EVM: ChainCopy = {
 }
 
 const SOLANA: ChainCopy = {
-  oracle: 'Pyth',
+  oracle: 'oracle',
   guard: 'the Stabrix sentinel',
   haltSource: 'the Stabrix sentinel',
   venue: 'Stabrix program',
   swapIntro:
     'Any pair across eight Solana stablecoins. One quote splits across LP strategies and settles in one transaction, paid straight from the LPs’ wallets.',
-  pricesNote: 'Pegged coins count at $1 unless the sentinel halts them. FX coins use Pyth rates checked by the sentinel. Tap a coin to receive it.',
+  pricesNote:
+    'Pegged coins count at $1 unless the sentinel halts them. FX coins use the rate the sentinel last reported, checked against Pyth, ECB, CoinGecko and DefiLlama. Tap a coin to receive it.',
   rateStale: (coins) =>
     coins.length > 1
-      ? `The Pyth rates for ${coins.join(', ')} are stale, so ranges with these coins pause until they update.`
-      : `The Pyth rate for ${coins[0]} is stale, so ranges with it pause until it updates.`,
+      ? `The oracle rates for ${coins.join(', ')} have expired, so ranges with these coins pause until the sentinel reports again.`
+      : `The oracle rate for ${coins[0]} has expired, so ranges with it pause until the sentinel reports again.`,
   gas: 'SOL',
 }
 

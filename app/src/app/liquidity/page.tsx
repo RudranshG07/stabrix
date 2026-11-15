@@ -579,6 +579,15 @@ export default function LiquidityPage() {
         }
       />
       <TestCoinsNotice />
+      {deployment.chainId === 101 && (
+        <div className="rounded-xl border border-down/60 bg-down/10 px-5 py-4" role="note">
+          <p className="text-[11px] font-medium tracking-[0.08em] text-down uppercase">Unaudited program on Solana mainnet</p>
+          <p className="mt-1.5 text-[14px] leading-snug">
+            A strategy lets the Stabrix program pay takers straight from your wallet when trades fill. The program has not been audited, so only use amounts you can
+            afford to lose, a few dollars at most. Close a strategy any time to revoke the approval and get its rent back.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-12">
         <Panel className="p-5 sm:p-7 lg:col-span-7 lg:self-start">
