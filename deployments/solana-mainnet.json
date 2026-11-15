@@ -1,0 +1,91 @@
+{
+  "kind": "solana",
+  "cluster": "mainnet-beta",
+  "chainId": 101,
+  "programId": "9yndJ2CVGSWr58nXNVS8rgkYFiiXghkchicSK5KjhABw",
+  "oracle": "A6DuBEhUJYfhe2V3nPSkjoxJCZw8j2Q8aTbo98WDbdpm",
+  "faucet": false,
+  "fromBlock": 469696487,
+  "tokens": [
+    {
+      "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "symbol": "USDC",
+      "name": "USD Coin",
+      "decimals": 6,
+      "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "fx": false,
+      "feed": "",
+      "marketFeed": "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX"
+    },
+    {
+      "address": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+      "symbol": "USDT",
+      "name": "Tether USD",
+      "decimals": 6,
+      "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "fx": false,
+      "feed": "",
+      "marketFeed": "HT2PLQBcG5EiCcNSaMHAjSgd9F98ecpATbk4Sk5oYuM"
+    },
+    {
+      "address": "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",
+      "symbol": "PYUSD",
+      "name": "PayPal USD",
+      "decimals": 6,
+      "tokenProgram": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "fx": false,
+      "feed": "",
+      "marketFeed": ""
+    },
+    {
+      "address": "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH",
+      "symbol": "USDG",
+      "name": "Global Dollar",
+      "decimals": 6,
+      "tokenProgram": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "fx": false,
+      "feed": "",
+      "marketFeed": "6JkZmXGgWnzsyTQaqRARzP64iFYnpMNT4siiuUDUaB8s"
+    },
+    {
+      "address": "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA",
+      "symbol": "USDS",
+      "name": "USDS Stablecoin",
+      "decimals": 6,
+      "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "fx": false,
+      "feed": "",
+      "marketFeed": ""
+    },
+    {
+      "address": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
+      "symbol": "USDe",
+      "name": "USDe",
+      "decimals": 9,
+      "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "fx": false,
+      "feed": "",
+      "marketFeed": "Cr8vurLth4b7CFNdvoXDpxuRi21CWvbQFLKy8BTwN4Wf"
+    },
+    {
+      "address": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+      "symbol": "EURC",
+      "name": "EURC",
+      "decimals": 6,
+      "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "fx": true,
+      "feed": "HyBsZY1UiGttbQ3ppBmnFVss9rmDAEvEbtYxdfjNAqBZ",
+      "marketFeed": ""
+    },
+    {
+      "address": "FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
+      "symbol": "BRZ",
+      "name": "BRZ Token",
+      "decimals": 4,
+      "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "fx": true,
+      "feed": "",
+      "marketFeed": ""
+    }
+  ]
+}
