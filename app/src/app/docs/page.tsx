@@ -5,6 +5,7 @@ import { DocsDeployment } from '@/components/docs-deployment'
 
 const CHAPTERS: [string, string][] = [
   ['overview', 'Overview'],
+  ['solana', 'Solana'],
   ['quickstart', 'Quick start'],
   ['concepts', 'Concepts'],
   ['ranges', 'FX ranges'],
@@ -22,6 +23,17 @@ const CHAPTERS: [string, string][] = [
   ['security', 'Security model'],
   ['limits', 'Risks and limits'],
   ['faq', 'FAQ'],
+]
+
+const SOLANA_COINS: [string, string, string, string][] = [
+  ['USDC', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', '6', 'SPL Token'],
+  ['USDT', 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', '6', 'SPL Token'],
+  ['PYUSD', '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo', '6', 'Token-2022'],
+  ['USDG', '2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH', '6', 'Token-2022'],
+  ['USDS', 'USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA', '6', 'SPL Token'],
+  ['USDe', 'DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT', '9', 'SPL Token'],
+  ['EURC', 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr', '6', 'SPL Token'],
+  ['BRZ', 'FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD', '4', 'SPL Token'],
 ]
 
 function Tex({ children }: { children: string }) {
@@ -229,6 +241,46 @@ export default function DocsPage() {
             On our Base mainnet fork, one maker wallet holds $320,019 in eight stablecoins. It runs a Tight FX range worth $320,019 and, from the same balance, a backstop
             pledging $60,000 of USDC and USDT. That is $380,019 of strategies on a $320,019 wallet: a shared liquidity ratio of 1.19x, with every coin still in the wallet.
           </P>
+        </Section>
+
+        <Section id="solana">
+          <P>
+            The same two jobs run as a native Solana program. Opening a strategy approves the Stabrix program as an SPL token delegate for the coins it uses, the Solana
+            version of an Aqua allowance. Coins stay in your own token accounts. When a trade fills, the program takes the taker&apos;s coin into your wallet and pays the
+            other coin out of it, in one instruction per leg. Ranges use the same sphere curve and backstops the same discount curve as the EVM contracts.
+          </P>
+          <Table
+            mono
+            head={['Network', 'Program', 'Oracle']}
+            rows={[
+              ['Solana mainnet', '9yndJ2CVGSWr58nXNVS8rgkYFiiXghkchicSK5KjhABw', 'A6DuBEhUJYfhe2V3nPSkjoxJCZw8j2Q8aTbo98WDbdpm'],
+              ['Solana devnet', '9yndJ2CVGSWr58nXNVS8rgkYFiiXghkchicSK5KjhABw', 'A6DuBEhUJYfhe2V3nPSkjoxJCZw8j2Q8aTbo98WDbdpm'],
+            ]}
+          />
+          <H3>Coins on Solana mainnet</H3>
+          <Table mono head={['Coin', 'Mint', 'Decimals', 'Token program']} rows={SOLANA_COINS} />
+          <P>Devnet uses test copies of these coins with the same decimals. Anyone can mint them from the account menu with Get test coins.</P>
+          <H3>Prices and halts</H3>
+          <List
+            items={[
+              'Dollar coins count at $1. EURC and BRZ use the rate the sentinel last reported.',
+              'The sentinel runs the same policy as the Chainlink CRE workflow: it checks Pyth price accounts, ECB rates, CoinGecko and DefiLlama, halts a coin at 3% off peg (0.75% when both sides agree), and lifts the halt inside 0.25%.',
+              'A reported rate expires after 15 minutes on mainnet. FX ranges with an expired rate pause, dollar pairs keep trading.',
+              'A halted coin is refused by ranges and bought only by backstops, at its reported market price minus the discount, never above face value.',
+              'The guardian (the oracle admin) can halt or resume a coin by hand.',
+            ]}
+          />
+          <H3>Wallets and costs</H3>
+          <List
+            items={[
+              'Phantom, Solflare, Backpack and any Wallet Standard wallet connect from the account menu.',
+              'A swap costs the normal Solana fee and about 50,000 compute units per leg. Your coin goes straight to the LP and theirs straight to you.',
+              'Opening a strategy locks 0.0027 SOL of rent, returned when you close it, plus 0.0015 SOL for any token account your wallet does not have yet.',
+              'Closing a strategy also revokes the delegate approval once no other strategy of yours uses that coin.',
+              'Each token account has one delegate, so opening a strategy replaces any other delegate approval on that account.',
+              'The program has not been audited. On mainnet, keep strategies small.',
+            ]}
+          />
         </Section>
 
         <Section id="quickstart">
@@ -461,6 +513,9 @@ export default function DocsPage() {
         </Section>
 
         <Section id="networks">
+          <P>
+            Solana addresses and coin mints are in the <a href="#solana" className="underline decoration-line underline-offset-2 hover:decoration-ink">Solana</a> chapter.
+          </P>
           <H3>Base mainnet, 1inch and Chainlink</H3>
           <Table
             mono

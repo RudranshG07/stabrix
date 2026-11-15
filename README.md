@@ -524,7 +524,7 @@ cd ../cre && cre workflow simulate depeg-sentinel -T testnet-settings --broadcas
 
 ### Hosting
 
-The app runs on Vercel's free tier: import the repo, set Root Directory to `app`, and set `DEPLOYMENT_NAME=solana-mainnet,solana-devnet,84532,8453`. One site serves every network with a network switch in the header; the first network listed is the default. Solana wallets connect through the Wallet Standard (Phantom, Solflare, Backpack). The public Solana RPCs rate-limit browsers, so set `NEXT_PUBLIC_RPC_URL_103` (devnet) and `NEXT_PUBLIC_RPC_URL_101` (mainnet) to a free provider key if you can. Never set `NEXT_PUBLIC_DEV_ACCOUNTS` on a hosted build.
+The app runs on Vercel's free tier: import the repo, set Root Directory to `app`, and set `DEPLOYMENT_NAME=solana-mainnet,solana-devnet,84532,8453`. One site serves every network with a network switch in the header; the first network listed is the default. Solana wallets connect through the Wallet Standard (Phantom, Solflare, Backpack). The public Solana mainnet RPC refuses browser requests, so the app sends Solana reads and transactions through its own `/api/rpc` route, which forwards an allowlist of methods. Set `SOLANA_RPC_URL_101` and `SOLANA_RPC_URL_103` on the server to use a keyed provider instead of the public endpoints. Never set `NEXT_PUBLIC_DEV_ACCOUNTS` on a hosted build.
 
 ## References
 
